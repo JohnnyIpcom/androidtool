@@ -5,8 +5,8 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/johnnyipcom/androidtool/internal/assets"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
 )
 
@@ -40,15 +40,14 @@ func (m *main) buildUI() *fyne.Container {
 			}
 
 			defer file.Close()
-			if err := m.client.Install(file); err != nil {
-				dialog.ShowError(err, m.parent)
-				return
-			}
+			go Install(m.client, file, m.parent)
 		}, m.parent)
 
+		fopenDialog.Resize(DialogSize(m.parent))
 		fopenDialog.SetFilter(storage.NewExtensionFileFilter([]string{".apk", ".aab"}))
 		fopenDialog.Show()
 	})
+	installButton.SetIcon(assets.InstallIcon)
 
 	return container.NewVBox(
 		widget.NewLabel("Devices:"),
@@ -58,5 +57,5 @@ func (m *main) buildUI() *fyne.Container {
 }
 
 func (m *main) tabItem() *container.TabItem {
-	return &container.TabItem{Text: "Main", Icon: theme.MailSendIcon(), Content: m.buildUI()}
+	return &container.TabItem{Text: "Main", Icon: assets.MainTabIcon, Content: m.buildUI()}
 }

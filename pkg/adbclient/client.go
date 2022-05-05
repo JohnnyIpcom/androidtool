@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"time"
 
 	adb "github.com/zach-klippenstein/goadb"
 )
@@ -89,22 +91,22 @@ func (c *Client) deviceWatcher(ctx context.Context) {
 	}
 }
 
+// DeviceWatcher returns a channel that receives device state changes.
 func (c *Client) DeviceWatcher() <-chan DeviceStateChangedEvent {
 	return c.events
 }
 
-func (c *Client) Device(serial string) (*Device, error) {
+// Device returns a device with the given serial.
+func (c *Client) GetDevice(serial string) (*Device, error) {
 	return NewDevice(c.adb.Device(adb.DeviceWithSerial(serial)))
 }
 
-// Install installs the given APK file.
-func (c *Client) Install(r io.Reader) error {
+func (c *Client) GetAnyOnlineDevice() (*Device, error) {
 	deviceInfos, err := c.adb.ListDevices()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var validDevice *adb.Device
 	for _, deviceInfo := range deviceInfos {
 		device := c.adb.Device(adb.DeviceWithSerial(deviceInfo.Serial))
 
@@ -114,14 +116,106 @@ func (c *Client) Install(r io.Reader) error {
 		}
 
 		if adb.StateOnline == state {
-			validDevice = device
-			break
+			return &Device{
+				Serial: deviceInfo.Serial,
+				Model:  deviceInfo.Model,
+				State:  DeviceState(state),
+			}, nil
 		}
 	}
 
-	if validDevice == nil {
-		return fmt.Errorf("no valid device found")
+	return nil, fmt.Errorf("no online device found")
+}
+
+type progressFunc func(sentBytes int64, totalBytes int64)
+
+type uploadOptions struct {
+	progressFunc progressFunc
+}
+
+// UploadOption is an option for uploading file.
+type UploadOption interface {
+	apply(*uploadOptions) error
+}
+
+type progressUploadOption struct {
+	progressFunc progressFunc
+}
+
+func (o progressUploadOption) apply(opts *uploadOptions) error {
+	opts.progressFunc = o.progressFunc
+	return nil
+}
+
+func WithProgress(f func(sentBytes int64, totalBytes int64)) UploadOption {
+	return progressUploadOption{f}
+}
+
+type readerFunc func(p []byte) (n int, err error)
+
+func (rf readerFunc) Read(p []byte) (n int, err error) {
+	return rf(p)
+}
+
+// Upload uploads a file to the device.
+func (c *Client) Upload(ctx context.Context, device *Device, src, dst string, opts ...UploadOption) error {
+	c.log.Printf("Uploading to %s...", dst)
+
+	var options uploadOptions
+	for _, opt := range opts {
+		err := opt.apply(&options)
+		if err != nil {
+			return nil
+		}
 	}
 
-	return nil
+	file, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+
+	fi, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	w, err := c.adb.Device(adb.DeviceWithSerial(device.Serial)).OpenWrite(dst, os.FileMode(0664), time.Now())
+	if err != nil {
+		return err
+	}
+
+	total := 0
+	defer w.Close()
+	_, err = io.Copy(w, readerFunc(func(b []byte) (int, error) {
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+
+		default:
+			n, err := file.Read(b)
+			if err != nil {
+				return 0, err
+			}
+
+			total += n
+			if options.progressFunc != nil {
+				options.progressFunc(int64(total), fi.Size())
+			}
+			return n, err
+		}
+	}))
+
+	return err
+}
+
+func (c *Client) Install(ctx context.Context, device *Device, apkPath string) (string, error) {
+	c.log.Printf("Installing %s...", apkPath)
+
+	result, err := c.adb.Device(adb.DeviceWithSerial(device.Serial)).RunCommand("pm", "install", "-r", apkPath)
+	c.log.Println(result)
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
 }

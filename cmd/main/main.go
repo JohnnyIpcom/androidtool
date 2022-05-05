@@ -13,6 +13,6 @@ func main() {
 
 	w := a.NewWindow("G5 Android tool")
 	w.SetContent(ui.SetupUI(a, w))
-	w.Resize(fyne.NewSize(477, 685))
+	w.Resize(fyne.NewSize(700, 400))
 	w.ShowAndRun()
 }

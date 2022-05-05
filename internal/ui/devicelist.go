@@ -65,7 +65,7 @@ func (d *DeviceList) deviceWatcher() {
 
 		// if item is not found, create new item
 		if oldItem == nil {
-			newDevice, err := d.client.Device(event.Serial)
+			newDevice, err := d.client.GetDevice(event.Serial)
 			if err != nil {
 				continue
 			}

@@ -5,7 +5,6 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/johnnyipcom/androidtool/internal/assets"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
@@ -51,7 +50,7 @@ func (a *about) buildUI() *fyne.Container {
 }
 
 func (a *about) tabItem() *container.TabItem {
-	return &container.TabItem{Text: "About", Icon: theme.InfoIcon(), Content: a.buildUI()}
+	return &container.TabItem{Text: "About", Icon: assets.AboutTabIcon, Content: a.buildUI()}
 }
 
 func newBoldLabel(text string) *widget.Label {
