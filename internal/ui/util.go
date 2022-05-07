@@ -5,7 +5,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 )
 
-// DialogSize returns a suitable dialog size.
+// dialogSize returns a suitable dialog size.
 func DialogSize(parent fyne.Window) fyne.Size {
 	size := parent.Canvas().Size()
 	return fyne.NewSize(size.Width*0.8, size.Height*0.8)

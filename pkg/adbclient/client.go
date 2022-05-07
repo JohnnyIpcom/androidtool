@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	adb "github.com/zach-klippenstein/goadb"
@@ -98,7 +99,7 @@ func (c *Client) DeviceWatcher() <-chan DeviceStateChangedEvent {
 
 // Device returns a device with the given serial.
 func (c *Client) GetDevice(serial string) (*Device, error) {
-	return NewDevice(c.adb.Device(adb.DeviceWithSerial(serial)))
+	return NewDevice(c, c.adb.Device(adb.DeviceWithSerial(serial)))
 }
 
 func (c *Client) GetAnyOnlineDevice() (*Device, error) {
@@ -116,11 +117,7 @@ func (c *Client) GetAnyOnlineDevice() (*Device, error) {
 		}
 
 		if adb.StateOnline == state {
-			return &Device{
-				Serial: deviceInfo.Serial,
-				Model:  deviceInfo.Model,
-				State:  DeviceState(state),
-			}, nil
+			return NewDevice(c, device)
 		}
 	}
 
@@ -208,7 +205,8 @@ func (c *Client) Upload(ctx context.Context, device *Device, src, dst string, op
 	return err
 }
 
-func (c *Client) Install(ctx context.Context, device *Device, apkPath string) (string, error) {
+// Install installs a package to the device.
+func (c *Client) Install(device *Device, apkPath string) (string, error) {
 	c.log.Printf("Installing %s...", apkPath)
 
 	result, err := c.adb.Device(adb.DeviceWithSerial(device.Serial)).RunCommand("pm", "install", "-r", apkPath)
@@ -218,4 +216,43 @@ func (c *Client) Install(ctx context.Context, device *Device, apkPath string) (s
 	}
 
 	return result, nil
+}
+
+// parseKeyVal parses a key:val pair and returns key, val.
+func parseKeyVal(pair string) (string, string) {
+	split := strings.Split(pair, ":")
+	switch len(split) {
+	case 1:
+		return "", split[0]
+	case 2:
+		return split[0], split[1]
+	default:
+		return "", ""
+	}
+}
+
+func getProp(device *adb.Device, prop string) (string, error) {
+	result, err := device.RunCommand("getprop", prop)
+	if err != nil {
+		return "", err
+	}
+
+	_, value := parseKeyVal(strings.Trim(result, " \n"))
+	return value, nil
+}
+
+func wm(device *adb.Device, prop string) (string, error) {
+	result, err := device.RunCommand("wm", prop)
+	if err != nil {
+		return "", err
+	}
+
+	_, value := parseKeyVal(strings.Trim(result, " \n"))
+	return value, nil
+}
+
+// GetProp returns a property of the device.
+func (c *Client) GetProp(device *Device, prop string) (string, error) {
+	c.log.Printf("Getting %s...", prop)
+	return getProp(c.adb.Device(adb.DeviceWithSerial(device.Serial)), prop)
 }

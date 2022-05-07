@@ -44,11 +44,12 @@ func (d *DeviceList) UpdateItem(id int, item fyne.CanvasObject) {
 
 	device := d.items.Load(id).device
 	container.Objects[0].(*fyne.Container).Objects[0].(*widget.Icon).SetResource(assets.StatusIcons[device.State.String()])
-	container.Objects[0].(*fyne.Container).Objects[1].(*widget.Label).SetText(device.Serial)
+	container.Objects[0].(*fyne.Container).Objects[1].(*widget.Label).SetText(device.String())
 	container.Objects[1].(*widget.Label).SetText(strings.ToUpper(device.State.String()))
 }
 
 func (d *DeviceList) OnSelected(id int) {
+	go DeviceInfo(d.client, d.items.Load(id).device, d.window)
 	d.Unselect(id)
 }
 

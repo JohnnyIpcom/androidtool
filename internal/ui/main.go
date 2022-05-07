@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"fmt"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
@@ -28,25 +30,7 @@ func (m *main) buildUI() *fyne.Container {
 	deviceList := NewDeviceList(m.parent, m.client)
 	deviceList.Resize(fyne.NewSize(477, 200))
 
-	installButton := widget.NewButton("Install", func() {
-		fopenDialog := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
-			if err != nil {
-				dialog.ShowError(err, m.parent)
-				return
-			}
-
-			if file == nil {
-				return
-			}
-
-			defer file.Close()
-			go Install(m.client, file, m.parent)
-		}, m.parent)
-
-		fopenDialog.Resize(DialogSize(m.parent))
-		fopenDialog.SetFilter(storage.NewExtensionFileFilter([]string{".apk", ".aab"}))
-		fopenDialog.Show()
-	})
+	installButton := widget.NewButton("Install", m.onInstall)
 	installButton.SetIcon(assets.InstallIcon)
 
 	return container.NewVBox(
@@ -54,6 +38,35 @@ func (m *main) buildUI() *fyne.Container {
 		deviceList,
 		installButton,
 	)
+}
+
+func (m *main) onInstall() {
+	fopenDialog := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
+		if err != nil {
+			dialog.ShowError(err, m.parent)
+			return
+		}
+
+		if file == nil {
+			return
+		}
+
+		switch file.URI().Extension() {
+		case "apk":
+			go InstallAPK(m.client, file, m.parent)
+		case "aab":
+			go InstallAAB(m.client, file, m.parent)
+		default:
+			go func() {
+				defer file.Close()
+				dialog.ShowError(fmt.Errorf("unsupported file type: %s", file.URI().Extension()), m.parent)
+			}()
+		}
+	}, m.parent)
+
+	fopenDialog.Resize(DialogSize(m.parent))
+	fopenDialog.SetFilter(storage.NewExtensionFileFilter([]string{".apk", ".aab"}))
+	fopenDialog.Show()
 }
 
 func (m *main) tabItem() *container.TabItem {

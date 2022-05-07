@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"fmt"
 	"image/color"
 
 	"fyne.io/fyne/v2"
@@ -11,13 +12,15 @@ import (
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
 )
 
-func Install(client *adbclient.Client, file fyne.URIReadCloser, parent fyne.Window) {
+func InstallAPK(client *adbclient.Client, file fyne.URIReadCloser, parent fyne.Window) {
+	defer file.Close()
+
 	bar := NewProgressBar(parent)
 
 	rect := canvas.NewRectangle(color.Transparent)
 	rect.SetMinSize(fyne.NewSize(200, 0))
 
-	d := dialog.NewCustom("Preparing file to install", "Cancel", container.NewMax(rect, bar), parent)
+	d := dialog.NewCustom("Installation", "Cancel", container.NewMax(rect, bar), parent)
 	d.Show()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -44,7 +47,7 @@ func Install(client *adbclient.Client, file fyne.URIReadCloser, parent fyne.Wind
 	}
 
 	bar.Install()
-	result, err := client.Install(ctx, device, apkPath)
+	result, err := client.Install(device, apkPath)
 
 	if err != nil {
 		onError(err)
@@ -53,4 +56,8 @@ func Install(client *adbclient.Client, file fyne.URIReadCloser, parent fyne.Wind
 
 	d.Hide()
 	dialog.ShowInformation("Installation result", result, parent)
+}
+
+func InstallAAB(client *adbclient.Client, file fyne.URIReadCloser, parent fyne.Window) {
+	dialog.ShowError(fmt.Errorf("not implemented"), parent)
 }
