@@ -1,49 +1,86 @@
 package ui
 
 import (
-	"fmt"
+	"image/color"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/johnnyipcom/androidtool/internal/assets"
+	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
 )
 
 type main struct {
-	app    fyne.App
-	parent fyne.Window
-	client *adbclient.Client
+	app       fyne.App
+	parent    fyne.Window
+	adbclient *adbclient.Client
+	aabclient *aabclient.Client
+
+	deviceList             *DeviceList
+	useCustomKeystoreCheck *widget.Check
 }
 
-func uiMain(app fyne.App, parent fyne.Window, client *adbclient.Client) *main {
+func uiMain(app fyne.App, parent fyne.Window, adbclient *adbclient.Client, aabClient *aabclient.Client) *main {
 	return &main{
-		app:    app,
-		parent: parent,
-		client: client,
+		app:       app,
+		parent:    parent,
+		adbclient: adbclient,
+		aabclient: aabClient,
 	}
 }
 
 func (m *main) buildUI() *fyne.Container {
-	deviceList := NewDeviceList(m.parent, m.client)
-	deviceList.Resize(fyne.NewSize(477, 200))
+	m.deviceList = NewDeviceList(m.adbclient, m.parent)
 
-	installButton := widget.NewButton("Install", m.onInstall)
-	installButton.SetIcon(assets.InstallIcon)
+	rect := canvas.NewRectangle(color.Transparent)
+	rect.SetMinSize(fyne.NewSize(0, 75))
+
+	installAPKButton := widget.NewButton("Install *.apk", m.onInstallAPK)
+	installAPKButton.SetIcon(assets.InstallIcon)
+
+	m.useCustomKeystoreCheck = widget.NewCheck("Use custom keystore", m.onUseCustomKeystoreChecked)
+
+	installAABButton := widget.NewButton("Install *.aab", m.onInstallAAB)
+	installAABButton.SetIcon(assets.InstallIcon)
 
 	return container.NewVBox(
 		widget.NewLabel("Devices:"),
-		deviceList,
-		installButton,
+		container.NewMax(rect, m.deviceList),
+		container.NewGridWithColumns(
+			2,
+			widget.NewCard(
+				"",
+				"",
+				container.NewVBox(
+					layout.NewSpacer(),
+					installAPKButton,
+				),
+			),
+			widget.NewCard(
+				"",
+				"",
+				container.NewVBox(
+					m.useCustomKeystoreCheck,
+					installAABButton,
+				),
+			),
+		),
 	)
 }
 
-func (m *main) onInstall() {
+func (m *main) onUseCustomKeystoreChecked(checked bool) {
+}
+
+func (m *main) onInstallAPK() {
 	fopenDialog := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
 		if err != nil {
-			dialog.ShowError(err, m.parent)
+			ShowError(err, nil, m.parent)
 			return
 		}
 
@@ -51,22 +88,152 @@ func (m *main) onInstall() {
 			return
 		}
 
-		switch file.URI().Extension() {
-		case "apk":
-			go InstallAPK(m.client, file, m.parent)
-		case "aab":
-			go InstallAAB(m.client, file, m.parent)
-		default:
-			go func() {
-				defer file.Close()
-				dialog.ShowError(fmt.Errorf("unsupported file type: %s", file.URI().Extension()), m.parent)
-			}()
+		device, err := m.deviceList.SelectedDevice()
+		if err != nil {
+			ShowError(err, nil, m.parent)
+			return
 		}
+
+		go func() {
+			defer file.Close()
+			InstallAPK(m.adbclient, device.Serial, file, m.parent)
+		}()
 	}, m.parent)
 
 	fopenDialog.Resize(DialogSize(m.parent))
-	fopenDialog.SetFilter(storage.NewExtensionFileFilter([]string{".apk", ".aab"}))
+	fopenDialog.SetFilter(storage.NewExtensionFileFilter([]string{".apk"}))
 	fopenDialog.Show()
+}
+
+func (m *main) onInstallAAB() {
+	fopenDialog := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
+		if err != nil {
+			ShowError(err, nil, m.parent)
+			return
+		}
+
+		if file == nil {
+			return
+		}
+
+		device, err := m.deviceList.SelectedDevice()
+		if err != nil {
+			ShowError(err, nil, m.parent)
+			return
+		}
+
+		go func() {
+			defer file.Close()
+			InstallAAB(m.aabclient, device.Serial, file, m.getCustomKeystore(), m.parent)
+		}()
+	}, m.parent)
+
+	fopenDialog.Resize(DialogSize(m.parent))
+	fopenDialog.SetFilter(storage.NewExtensionFileFilter([]string{".aab"}))
+	fopenDialog.Show()
+}
+
+type alignToRightLayout struct{}
+
+var _ fyne.Layout = &alignToRightLayout{}
+
+func (l *alignToRightLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	topRight := fyne.NewPos(size.Width, 0)
+
+	var width float32
+	for i := len(objects) - 1; i >= 1; i-- {
+		width += objects[i].MinSize().Width
+
+		topRight = topRight.Subtract(fyne.NewSize(objects[i].MinSize().Width, 0))
+		objects[i].Move(topRight)
+		objects[i].Resize(fyne.Size{Width: objects[i].MinSize().Width, Height: size.Height})
+	}
+
+	if len(objects) > 0 {
+		objects[0].Move(fyne.NewPos(0, 0))
+		objects[0].Resize(fyne.Size{Width: size.Width - width, Height: size.Height})
+	}
+}
+
+func (l *alignToRightLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	var minHeight, totalWidth float32
+	for _, object := range objects {
+		if object.MinSize().Height > minHeight {
+			minHeight = object.MinSize().Height
+		}
+
+		totalWidth += object.MinSize().Width
+	}
+
+	return fyne.NewSize(totalWidth, minHeight)
+}
+
+func (m *main) getCustomKeystore() *aabclient.KeystoreConfig {
+	if !m.useCustomKeystoreCheck.Checked {
+		return nil
+	}
+
+	keystoreChan := make(chan *aabclient.KeystoreConfig)
+	go func() {
+		defaultKeystore := aabclient.NewDefaultKeystoreConfig("./debug.keystore")
+
+		keystorePathEntry := widget.NewEntry()
+		keystorePathEntry.SetText(defaultKeystore.KeystorePath)
+
+		keystorePathButton := widget.NewButtonWithIcon("Select", theme.FileIcon(), func() {
+			fopenDialog := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
+				if err != nil {
+					ShowError(err, nil, m.parent)
+					return
+				}
+
+				if file == nil {
+					return
+				}
+
+				defer file.Close()
+				keystorePathEntry.SetText(file.URI().Path())
+			}, m.parent)
+
+			fopenDialog.Resize(DialogSize(m.parent))
+			fopenDialog.SetFilter(storage.NewExtensionFileFilter([]string{".keystore"}))
+			fopenDialog.Show()
+		})
+
+		keystorePassEntry := widget.NewPasswordEntry()
+		keystorePassEntry.SetText(defaultKeystore.KeystorePass)
+
+		keyAliasEntry := widget.NewEntry()
+		keyAliasEntry.SetText(defaultKeystore.KeyAlias)
+
+		keyPassEntry := widget.NewPasswordEntry()
+		keyPassEntry.SetText(defaultKeystore.KeyPass)
+
+		form := dialog.NewForm("Custom keystore config", "Confirm", "Dismiss", []*widget.FormItem{
+			{Text: "Keystore path:", Widget: container.New(&alignToRightLayout{}, keystorePathEntry, keystorePathButton)},
+			{Text: "Keystore pass:", Widget: keystorePassEntry},
+			{Text: "Key alias:", Widget: keyAliasEntry},
+			{Text: "Key pass:", Widget: keyPassEntry},
+		}, func(submitted bool) {
+			keystore := &aabclient.KeystoreConfig{
+				KeystorePath: keystorePathEntry.Text,
+				KeystorePass: keystorePassEntry.Text,
+				KeyAlias:     keyAliasEntry.Text,
+				KeyPass:      keyPassEntry.Text,
+			}
+			if !submitted || keystore.KeystorePath == keystorePathEntry.PlaceHolder {
+				keystoreChan <- nil
+			} else {
+				keystoreChan <- keystore
+			}
+			close(keystoreChan)
+		}, m.parent)
+
+		form.Resize(fyne.Size{Width: m.parent.Canvas().Size().Width * 0.8, Height: 0})
+		form.Show()
+	}()
+
+	return <-keystoreChan
 }
 
 func (m *main) tabItem() *container.TabItem {

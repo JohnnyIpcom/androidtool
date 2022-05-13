@@ -9,6 +9,7 @@ import "fyne.io/fyne/v2"
 //go:generate fyne bundle -package assets -o bundled.go -append icon_unauthorized.png
 //go:generate fyne bundle -package assets -o bundled.go -append icon_unknown.png
 //go:generate fyne bundle -package assets -o bundled.go -append icon_about.png
+//go:generate fyne bundle -package assets -o bundled.go -append icon_settings.png
 //go:generate fyne bundle -package assets -o bundled.go -append icon_main.png
 //go:generate fyne bundle -package assets -o bundled.go -append icon_install.png
 
@@ -20,6 +21,9 @@ var MainTabIcon = resourceIconmainPng
 
 // AboutTabIcon is the icon for the about tab
 var AboutTabIcon = resourceIconaboutPng
+
+// SettingsTabIcon is the icon for the settings tab
+var SettingsTabIcon = resourceIconsettingsPng
 
 // InstallIcon is the icon for the install button
 var InstallIcon = resourceIconinstallPng

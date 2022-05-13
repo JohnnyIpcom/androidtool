@@ -30,9 +30,9 @@ func (a *about) buildUI() *fyne.Container {
 	a.icon = canvas.NewImageFromResource(assets.AppIcon)
 	a.icon.SetMinSize(fyne.NewSize(256, 256))
 
-	a.nameLabel = newBoldLabel("G5 Android Tool")
-	a.spacerLabel = newBoldLabel("-")
-	a.versionLabel = newBoldLabel("v" + version + " (client v" + a.client.Version() + ")")
+	a.nameLabel = NewBoldLabel("G5 Android Tool")
+	a.spacerLabel = NewBoldLabel("-")
+	a.versionLabel = NewBoldLabel("v" + version + " (client v" + a.client.Version() + ")")
 
 	spacer := &layout.Spacer{}
 	return container.NewVBox(
@@ -51,8 +51,4 @@ func (a *about) buildUI() *fyne.Container {
 
 func (a *about) tabItem() *container.TabItem {
 	return &container.TabItem{Text: "About", Icon: assets.AboutTabIcon, Content: a.buildUI()}
-}
-
-func newBoldLabel(text string) *widget.Label {
-	return &widget.Label{Text: text, TextStyle: fyne.TextStyle{Bold: true}}
 }

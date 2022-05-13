@@ -5,6 +5,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
+	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
 )
 
@@ -18,6 +19,12 @@ func (p *ProgressBar) WithProgress() adbclient.UploadOption {
 	return adbclient.WithProgress(func(sentBytes int64, totalBytes int64) {
 		once.Do(func() { p.Max = float64(totalBytes) })
 		p.SetValue(float64(sentBytes))
+	})
+}
+
+func (p *ProgressBar) WithMax(max float64) aabclient.DownloadOption {
+	return aabclient.WithProgress(func(sentBytes int64) {
+		p.SetValue(p.Value + float64(sentBytes))
 	})
 }
 

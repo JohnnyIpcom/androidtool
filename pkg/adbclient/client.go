@@ -12,20 +12,30 @@ import (
 	adb "github.com/zach-klippenstein/goadb"
 )
 
+const (
+	DefaultInstallPath = "/data/local/tmp/app.apk"
+	DefaultPort        = adb.AdbPort
+)
+
 // Client is a ui wrapper around the adb client.
 type Client struct {
 	adb    *adb.Adb
 	log    *log.Logger
 	events chan DeviceStateChangedEvent
+	port   int
+
+	installPath string
 }
 
 // New creates a new client.
-func NewClient(l *log.Logger) (*Client, error) {
-	innerLog := log.New(l.Writer(), "[Client] ", 0)
+func NewClient(port int, l *log.Logger) (*Client, error) {
+	innerLog := log.New(l.Writer(), "[APKClient]  ", 0)
 	innerLog.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	innerLog.Println("Creating ADB client...")
-	adb, err := adb.New()
+	config := adb.ServerConfig{Port: port}
+
+	innerLog.Printf("Creating ADB client on port %d", port)
+	adb, err := adb.NewWithConfig(config)
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +43,7 @@ func NewClient(l *log.Logger) (*Client, error) {
 	return &Client{
 		adb:    adb,
 		log:    innerLog,
+		port:   port,
 		events: make(chan DeviceStateChangedEvent),
 	}, nil
 }
@@ -69,6 +80,10 @@ func (c *Client) ServerVersion() int {
 	}
 
 	return ver
+}
+
+func (c *Client) Port() int {
+	return c.port
 }
 
 // deviceWatcher watches for device state changes.
@@ -203,6 +218,19 @@ func (c *Client) Upload(ctx context.Context, device *Device, src, dst string, op
 	}))
 
 	return err
+}
+
+// SetInstallPath sets the path to install the apk.
+func (c *Client) SetInstallPath(path string) {
+	c.installPath = path
+}
+
+func (c *Client) GetInstallPath() string {
+	if c.installPath == "" {
+		return DefaultInstallPath
+	}
+
+	return c.installPath
 }
 
 // Install installs a package to the device.

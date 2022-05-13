@@ -6,27 +6,43 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
 )
 
 func SetupUI(app fyne.App, parent fyne.Window) fyne.CanvasObject {
-	client, err := adbclient.NewClient(log.Default())
+	prefs := app.Preferences()
+
+	adbPort := prefs.IntWithFallback("adb_port", adbclient.DefaultPort)
+	adbClient, err := adbclient.NewClient(adbPort, log.Default())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	bundletoolVersion := prefs.StringWithFallback("bundletool_version", aabclient.BundleToolDefaultVersion)
+	aabClient, err := aabclient.NewClient(bundletoolVersion, log.Default())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	if err := client.Start(ctx); err != nil {
+	if err := adbClient.Start(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := aabClient.Start(ctx); err != nil {
 		log.Fatal(err)
 	}
 
 	parent.SetOnClosed(func() {
 		cancel()
-		client.Stop()
+		adbClient.Stop()
+		aabClient.Stop()
 	})
 
 	return &container.AppTabs{Items: []*container.TabItem{
-		uiMain(app, parent, client).tabItem(),
-		uiAbout(client).tabItem(),
+		uiMain(app, parent, adbClient, aabClient).tabItem(),
+		uiSettings(app, parent, adbClient, aabClient).tabItem(),
+		uiAbout(adbClient).tabItem(),
 	}}
 }

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -11,27 +12,34 @@ import (
 	"github.com/johnnyipcom/androidtool/pkg/generic"
 )
 
+// DeviceItem is a single device item
 type DeviceItem struct {
 	device *adbclient.Device
+	check  *widget.Check
 }
 
+// DeviceList is a list of devices
 type DeviceList struct {
 	widget.List
 
-	client *adbclient.Client
-	items  *generic.Slice[*DeviceItem]
-	window fyne.Window
+	client   *adbclient.Client
+	items    *generic.Slice[*DeviceItem]
+	selected *DeviceItem
+	parent   fyne.Window
 }
 
+// Length returns the number of items in the list
 func (d *DeviceList) Length() int {
 	return d.items.Len()
 }
 
+// CreateItem creates a new empty entry in the list
 func (d *DeviceList) CreateItem() fyne.CanvasObject {
 	return container.NewBorder(
 		nil,
 		nil,
 		container.NewHBox(
+			widget.NewCheck("", nil),
 			widget.NewIcon(assets.StatusIcons["invalid"]),
 			widget.NewLabel(""),
 		),
@@ -39,20 +47,57 @@ func (d *DeviceList) CreateItem() fyne.CanvasObject {
 	)
 }
 
+// UpdateItem updates the item in the list
 func (d *DeviceList) UpdateItem(id int, item fyne.CanvasObject) {
 	container := item.(*fyne.Container)
 
-	device := d.items.Load(id).device
-	container.Objects[0].(*fyne.Container).Objects[0].(*widget.Icon).SetResource(assets.StatusIcons[device.State.String()])
-	container.Objects[0].(*fyne.Container).Objects[1].(*widget.Label).SetText(device.String())
-	container.Objects[1].(*widget.Label).SetText(strings.ToUpper(device.State.String()))
+	deviceItem := d.items.Load(id)
+	container.Objects[0].(*fyne.Container).Objects[1].(*widget.Icon).SetResource(assets.StatusIcons[deviceItem.device.State.String()])
+	container.Objects[0].(*fyne.Container).Objects[2].(*widget.Label).SetText(deviceItem.device.String())
+	container.Objects[1].(*widget.Label).SetText(strings.ToUpper(deviceItem.device.State.String()))
+	deviceItem.check = container.Objects[0].(*fyne.Container).Objects[0].(*widget.Check)
+	deviceItem.check.OnChanged = func(checked bool) {
+		d.OnCheckChanged(id, checked)
+	}
+
+	// Auto-select first device
+	if d.selected == nil {
+		deviceItem.check.SetChecked(true)
+	}
 }
 
+// OnSelected is called when the user selects an item
 func (d *DeviceList) OnSelected(id int) {
-	go DeviceInfo(d.client, d.items.Load(id).device, d.window)
+	go DeviceInfo(d.client, d.items.Load(id).device, d.parent)
 	d.Unselect(id)
 }
 
+// OnCheckChanged is called when the user checks or unchecks a device
+func (d *DeviceList) OnCheckChanged(id int, checked bool) {
+	deviceItem := d.items.Load(id)
+	if checked {
+		// Unselect all other items
+		d.items.Each(func(i int, item *DeviceItem) bool {
+			if item.device.Serial != deviceItem.device.Serial {
+				if item.check != nil {
+					// can't use item.check.SetChecked(false) because it will trigger OnCheckChanged again
+					item.check.Checked = false
+					item.check.Refresh()
+				}
+			}
+
+			return true
+		})
+
+		d.selected = deviceItem
+	} else {
+		// reselect current device, one and only one device must be selected
+		deviceItem.check.Checked = true
+		deviceItem.check.Refresh()
+	}
+}
+
+// deviceWatcher watches for device changes
 func (d *DeviceList) deviceWatcher() {
 	for event := range d.client.DeviceWatcher() {
 		var oldItem *DeviceItem
@@ -81,9 +126,23 @@ func (d *DeviceList) deviceWatcher() {
 	}
 }
 
-func NewDeviceList(window fyne.Window, client *adbclient.Client) *DeviceList {
+// SelectDevice selects a device
+func (d *DeviceList) SelectedDevice() (*adbclient.Device, error) {
+	if d.selected == nil {
+		return nil, fmt.Errorf("no device selected")
+	}
+
+	if d.selected.device.State != adbclient.StateOnline {
+		return nil, fmt.Errorf("device is not online")
+	}
+
+	return d.selected.device, nil
+}
+
+// NewDeviceList creates a new device list
+func NewDeviceList(client *adbclient.Client, parent fyne.Window) *DeviceList {
 	d := &DeviceList{
-		window: window,
+		parent: parent,
 		client: client,
 		items:  generic.NewSlice[*DeviceItem](),
 	}
