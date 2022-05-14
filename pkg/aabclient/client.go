@@ -3,21 +3,21 @@ package aabclient
 import (
 	"context"
 	"fmt"
-	"log"
+
+	"github.com/johnnyipcom/androidtool/pkg/logger"
 )
 
 // Client is a client for the Android Asset Packaging Tool.
 type Client struct {
 	tool *BundleTool
-	log  *log.Logger
+	log  logger.Logger
 }
 
 // NewClient creates a new AAB client.
-func NewClient(version string, l *log.Logger) (*Client, error) {
-	innerLog := log.New(l.Writer(), "[AABClient]  ", 0)
-	innerLog.SetFlags(log.LstdFlags | log.Lshortfile)
+func NewClient(version string, log logger.Logger) (*Client, error) {
+	innerLog := log.WithField("component", "AABClient")
+	innerLog.Info("Creating AAB client...")
 
-	innerLog.Println("Creating AAB client...")
 	tool, err := NewBundleTool(version, innerLog)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func NewClient(version string, l *log.Logger) (*Client, error) {
 
 // Start starts the AAB client.
 func (c *Client) Start(ctx context.Context) error {
-	c.log.Println("Starting AAB client...")
+	c.log.Info("Starting AAB client...")
 
 	// If the bundle tool is not installed, install it.
 	if !c.tool.IsInstalled() {
@@ -46,7 +46,7 @@ func (c *Client) Start(ctx context.Context) error {
 
 // Stop stops the AAB client.
 func (c *Client) Stop() {
-	c.log.Println("Stopping AAB client...")
+	c.log.Info("Stopping AAB client...")
 }
 
 // SetBundleToolVersion sets the version of the bundle tool and downloads this version.
@@ -79,7 +79,7 @@ func NewDefaultKeystoreConfig(path string) *KeystoreConfig {
 
 // BuildAPKs unpacks the given AAB file and builds the universal APKs file bundle.
 func (c *Client) BuildAPKs(ctx context.Context, aabPath string, apksPath string, serial string, keystore *KeystoreConfig) ([]byte, error) {
-	c.log.Println("Building APKs...")
+	c.log.Info("Building APKs...")
 	var args []string = []string{
 		"build-apks",
 		"--overwrite",
@@ -109,7 +109,7 @@ func (c *Client) BuildAPKs(ctx context.Context, aabPath string, apksPath string,
 
 // InstallAPKs installs the given APKs file bundle on the device.
 func (c *Client) InstallAPKs(ctx context.Context, apksPath string, serial string) ([]byte, error) {
-	c.log.Println("Installing APKs...")
+	c.log.Info("Installing APKs...")
 	args := []string{
 		"install-apks",
 		fmt.Sprintf("--apks=%s", apksPath),

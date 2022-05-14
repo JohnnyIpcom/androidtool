@@ -6,13 +6,14 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+
+	"github.com/johnnyipcom/androidtool/pkg/logger"
 )
 
 const (
@@ -27,13 +28,13 @@ type BundleTool struct {
 	version      string
 	downloadURL  *url.URL
 	downloadPath string
-	log          *log.Logger
+	log          logger.Logger
 }
 
 // NewBundleTool creates a new BundleTool instance.
-func NewBundleTool(version string, l *log.Logger) (*BundleTool, error) {
-	innerLog := log.New(l.Writer(), "[BundleTool] ", 0)
-	innerLog.SetFlags(log.LstdFlags | log.Lshortfile)
+func NewBundleTool(version string, log logger.Logger) (*BundleTool, error) {
+	innerLog := log.WithField("module", "BundleTool")
+	innerLog.Info("Creating AAB client...")
 
 	downloadPath, downloadURL, err := getDownloadPathAndURLForVersion(version)
 	if err != nil {
@@ -68,7 +69,7 @@ func getDownloadPathAndURLForVersion(version string) (string, *url.URL, error) {
 
 // SetVersion sets the version of bundletool to use. If the version is not installed, it will be downloaded.
 func (b *BundleTool) SetVersion(version string) error {
-	b.log.Printf("Setting version to %s...", version)
+	b.log.Infof("Setting version to %s...", version)
 
 	downloadPath, downloadURL, err := getDownloadPathAndURLForVersion(version)
 	if err != nil {
@@ -88,7 +89,7 @@ func (b *BundleTool) SetVersion(version string) error {
 	b.version = version
 	b.downloadURL = downloadURL
 	b.downloadPath = downloadPath
-	b.log.Printf("Version set to %s.", version)
+	b.log.Infof("Version set to %s.", version)
 	return nil
 }
 
@@ -104,12 +105,12 @@ func isInstalled(path string) bool {
 
 // IsInstalled returns true if bundletool is installed.
 func (b *BundleTool) IsInstalled() bool {
-	b.log.Printf("Checking bundletool v%s on %s...", b.version, b.downloadPath)
+	b.log.Infof("Checking bundletool v%s on %s...", b.version, b.downloadPath)
 	installed := isInstalled(b.downloadPath)
 	if installed {
-		b.log.Printf("Bundletool v%s is installed.", b.version)
+		b.log.Infof("Bundletool v%s is installed.", b.version)
 	} else {
-		b.log.Printf("Bundletool v%s is not installed.", b.version)
+		b.log.Infof("Bundletool v%s is not installed.", b.version)
 	}
 
 	return installed
@@ -218,31 +219,31 @@ func download(ctx context.Context, client *http.Client, url *url.URL, dst string
 
 // Download downloads bundletool to the given path.
 func (b *BundleTool) Download(ctx context.Context, opts ...DownloadOption) error {
-	b.log.Printf("Downloading bundletool v%s from %s to %s...", b.version, b.downloadURL.String(), b.downloadPath)
+	b.log.Infof("Downloading bundletool v%s from %s to %s...", b.version, b.downloadURL.String(), b.downloadPath)
 	err := download(ctx, b.client, b.downloadURL, b.downloadPath, opts...)
 	if err != nil {
 		return err
 	}
 
-	b.log.Println("Download complete.")
+	b.log.Infof("Download complete.")
 	return err
 }
 
 func (b *BundleTool) Run(ctx context.Context, args ...string) ([]byte, error) {
-	b.log.Printf("Running bundletool v%s with args %v...", b.version, args)
+	b.log.Infof("Running bundletool v%s with args %v...", b.version, args)
 
 	var command []string
 	command = append(command, "-jar", b.downloadPath)
 	command = append(command, args...)
 
 	cmd := exec.CommandContext(ctx, "java", command...)
-	b.log.Printf("Running command: %s", cmd.String())
+	b.log.Debugf("Running command: %s", cmd.String())
 	out, err := cmd.Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			scanner := bufio.NewScanner(bytes.NewReader(ee.Stderr))
 			for scanner.Scan() {
-				b.log.Println(scanner.Text())
+				b.log.Error(scanner.Text())
 			}
 
 			return ee.Stderr, ee
@@ -250,16 +251,17 @@ func (b *BundleTool) Run(ctx context.Context, args ...string) ([]byte, error) {
 
 		scanner := bufio.NewScanner(bytes.NewReader(out))
 		for scanner.Scan() {
-			b.log.Println(scanner.Text())
+			b.log.Error(scanner.Text())
 		}
 
 		return out, err
 	}
 
-	b.log.Println("Bundletool run complete.")
+	b.log.Info("Bundletool run complete.")
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	for scanner.Scan() {
-		b.log.Println(scanner.Text())
+		b.log.Debug(scanner.Text())
 	}
+
 	return out, nil
 }

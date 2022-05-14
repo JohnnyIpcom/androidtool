@@ -11,10 +11,12 @@ import (
 	appearance "fyne.io/fyne/v2/cmd/fyne_settings/settings"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/johnnyipcom/androidtool/internal/assets"
 	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
+	"github.com/johnnyipcom/androidtool/pkg/logger"
 )
 
 type settings struct {
@@ -22,19 +24,23 @@ type settings struct {
 	parent    fyne.Window
 	adbClient *adbclient.Client
 	aabClient *aabclient.Client
+	log       logger.Logger
 	prefs     fyne.Preferences
 
+	logPathButton          *widget.Button
+	logPathEntry           *widget.Entry
 	installPathEntry       *widget.Entry
 	adbPortEntry           *widget.Entry
 	bundletoolVersionEntry *widget.Entry
 }
 
-func uiSettings(app fyne.App, parent fyne.Window, adbClient *adbclient.Client, aabClient *aabclient.Client) *settings {
+func uiSettings(app fyne.App, parent fyne.Window, adbClient *adbclient.Client, aabClient *aabclient.Client, log logger.Logger) *settings {
 	return &settings{
 		app:       app,
 		parent:    parent,
 		adbClient: adbClient,
 		aabClient: aabClient,
+		log:       log,
 		prefs:     app.Preferences(),
 	}
 }
@@ -85,6 +91,30 @@ func (s *settings) onBundleToolVersionSubmitted(version string) {
 	}()
 }
 
+func (s *settings) onLogPathSubmitted(path string) {
+	s.prefs.SetString("log_path", path)
+	s.log.SetOutputFile(path)
+}
+
+func (s *settings) onLogPathButtonClicked() {
+	fsaveDialog := dialog.NewFileSave(func(file fyne.URIWriteCloser, err error) {
+		if err != nil {
+			return
+		}
+
+		if file == nil {
+			return
+		}
+
+		path := file.URI().Path()
+		s.logPathEntry.SetText(path)
+		s.onLogPathSubmitted(path)
+	}, s.parent)
+
+	fsaveDialog.Resize(DialogSize(s.parent))
+	fsaveDialog.Show()
+}
+
 func (s *settings) applyPreferences() {
 	path := s.prefs.StringWithFallback("install_path", adbclient.DefaultInstallPath)
 	s.installPathEntry.SetText(path)
@@ -94,6 +124,21 @@ func (s *settings) applyPreferences() {
 
 	version := s.prefs.StringWithFallback("bundletool_version", aabclient.BundleToolDefaultVersion)
 	s.bundletoolVersionEntry.SetText(version)
+}
+
+func (s *settings) buildAndroidToolUI() fyne.CanvasObject {
+	s.logPathEntry = &widget.Entry{
+		PlaceHolder: DefaultLogPath,
+		OnSubmitted: s.onLogPathSubmitted,
+	}
+
+	s.logPathButton = widget.NewButtonWithIcon(
+		"Select",
+		theme.FileIcon(),
+		s.onLogPathButtonClicked,
+	)
+
+	return container.New(&alignToRightLayout{}, s.logPathEntry, s.logPathButton)
 }
 
 func (s *settings) buildADBUI() fyne.CanvasObject {
@@ -166,9 +211,10 @@ func (s *settings) buildBundleToolUI() fyne.CanvasObject {
 }
 
 func (s *settings) buildUI() *fyne.Container {
+	interfaceUI := appearance.NewSettings().LoadAppearanceScreen(s.parent)
+	androidtoolUI := s.buildAndroidToolUI()
 	adbUI := s.buildADBUI()
 	bundletoolUI := s.buildBundleToolUI()
-	interfaceContainer := appearance.NewSettings().LoadAppearanceScreen(s.parent)
 
 	s.applyPreferences()
 
@@ -176,7 +222,12 @@ func (s *settings) buildUI() *fyne.Container {
 		widget.NewCard(
 			"User Interface",
 			"",
-			interfaceContainer,
+			interfaceUI,
+		),
+		widget.NewCard(
+			"Android Tool",
+			"",
+			androidtoolUI,
 		),
 		widget.NewCard(
 			"Android Debug Bridge",

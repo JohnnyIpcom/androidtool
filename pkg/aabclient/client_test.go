@@ -3,13 +3,13 @@ package aabclient
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
 	"testing"
+
+	"github.com/johnnyipcom/androidtool/pkg/logger/logrus"
 )
 
 func TestBuildAPK(t *testing.T) {
-	c, err := NewClient("1.10.0", log.New(os.Stdout, "", 0))
+	c, err := NewClient("1.10.0", logrus.New("./log.txt"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/johnnyipcom/androidtool/pkg/logger"
 	adb "github.com/zach-klippenstein/goadb"
 )
 
@@ -20,7 +20,7 @@ const (
 // Client is a ui wrapper around the adb client.
 type Client struct {
 	adb    *adb.Adb
-	log    *log.Logger
+	log    logger.Logger
 	events chan DeviceStateChangedEvent
 	port   int
 
@@ -28,13 +28,12 @@ type Client struct {
 }
 
 // New creates a new client.
-func NewClient(port int, l *log.Logger) (*Client, error) {
-	innerLog := log.New(l.Writer(), "[APKClient]  ", 0)
-	innerLog.SetFlags(log.LstdFlags | log.Lshortfile)
-
+func NewClient(port int, log logger.Logger) (*Client, error) {
 	config := adb.ServerConfig{Port: port}
 
-	innerLog.Printf("Creating ADB client on port %d", port)
+	innerLog := log.WithField("component", "ADBClient")
+	innerLog.Infof("Creating ADB client on port %d", port)
+
 	adb, err := adb.NewWithConfig(config)
 	if err != nil {
 		return nil, err
@@ -50,7 +49,7 @@ func NewClient(port int, l *log.Logger) (*Client, error) {
 
 // Start starts client.
 func (c *Client) Start(ctx context.Context) error {
-	c.log.Println("Starting ADB server...")
+	c.log.Info("Starting ADB server...")
 	if err := c.adb.StartServer(); err != nil {
 		return err
 	}
@@ -61,7 +60,7 @@ func (c *Client) Start(ctx context.Context) error {
 
 // Kill kills the client.
 func (c *Client) Stop() {
-	c.log.Println("Stopping ADB client...")
+	c.log.Info("Stopping ADB client...")
 	if err := c.adb.KillServer(); err != nil {
 		c.log.Fatal(err)
 	}
@@ -88,7 +87,7 @@ func (c *Client) Port() int {
 
 // deviceWatcher watches for device state changes.
 func (c *Client) deviceWatcher(ctx context.Context) {
-	c.log.Println("Starting device watcher...")
+	c.log.Info("Starting device watcher...")
 	defer close(c.events)
 
 	watcher := c.adb.NewDeviceWatcher()
@@ -97,11 +96,11 @@ func (c *Client) deviceWatcher(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			c.log.Println("Device watcher stopped.")
+			c.log.Debug("Device watcher stopped.")
 			return
 
 		case event := <-watcher.C():
-			c.log.Println("Device state changed:", event.Serial, event.NewState)
+			c.log.Infof("Device %s changed state to %s", event.Serial, event.NewState)
 			c.events <- NewDeviceStateChangedEvent(event)
 		}
 	}
@@ -171,7 +170,7 @@ func (rf readerFunc) Read(p []byte) (n int, err error) {
 
 // Upload uploads a file to the device.
 func (c *Client) Upload(ctx context.Context, device *Device, src, dst string, opts ...UploadOption) error {
-	c.log.Printf("Uploading to %s...", dst)
+	c.log.Infof("Uploading to %s...", dst)
 
 	var options uploadOptions
 	for _, opt := range opts {
@@ -235,10 +234,10 @@ func (c *Client) GetInstallPath() string {
 
 // Install installs a package to the device.
 func (c *Client) Install(device *Device, apkPath string) (string, error) {
-	c.log.Printf("Installing %s...", apkPath)
+	c.log.Infof("Installing %s...", apkPath)
 
 	result, err := c.adb.Device(adb.DeviceWithSerial(device.Serial)).RunCommand("pm", "install", "-r", apkPath)
-	c.log.Println(result)
+	c.log.Debug(result)
 	if err != nil {
 		return "", err
 	}
@@ -281,6 +280,6 @@ func wm(device *adb.Device, prop string) (string, error) {
 
 // GetProp returns a property of the device.
 func (c *Client) GetProp(device *Device, prop string) (string, error) {
-	c.log.Printf("Getting %s...", prop)
+	c.log.Info("Getting %s...", prop)
 	return getProp(c.adb.Device(adb.DeviceWithSerial(device.Serial)), prop)
 }
