@@ -218,26 +218,30 @@ func (s *settings) buildUI() *fyne.Container {
 
 	s.applyPreferences()
 
-	return container.NewVBox(
-		widget.NewCard(
-			"User Interface",
-			"",
-			interfaceUI,
-		),
-		widget.NewCard(
-			"Android Tool",
-			"",
-			androidtoolUI,
-		),
-		widget.NewCard(
-			"Android Debug Bridge",
-			"",
-			adbUI,
-		),
-		widget.NewCard(
-			"Bundletool",
-			"",
-			bundletoolUI,
+	return container.NewMax(
+		container.NewVScroll(
+			container.NewVBox(
+				widget.NewCard(
+					"User Interface",
+					"",
+					interfaceUI,
+				),
+				widget.NewCard(
+					"Android Tool",
+					"",
+					androidtoolUI,
+				),
+				widget.NewCard(
+					"Android Debug Bridge",
+					"",
+					adbUI,
+				),
+				widget.NewCard(
+					"Bundletool",
+					"",
+					bundletoolUI,
+				),
+			),
 		),
 	)
 }

@@ -40,11 +40,12 @@ func New(path string) logger.Logger {
 
 func (l *logrusLogger) WithField(key string, value interface{}) logger.Logger {
 	return &logrusLogger{
+		log:   l.log,
 		entry: l.entry.WithField(key, value),
 	}
 }
 
-func (l *logrusLogger) fileInfo(skip int) string {
+func (l logrusLogger) fileInfo(skip int) string {
 	_, file, line, ok := runtime.Caller(skip)
 	if !ok {
 		file = "<???>"
@@ -59,16 +60,41 @@ func (l *logrusLogger) fileInfo(skip int) string {
 	return fmt.Sprintf("%s:%d", file, line)
 }
 
-func (l *logrusLogger) Panic(args ...interface{}) {
-	l.entry.Panic(args...)
+func (l logrusLogger) toLogrusSeverity(severity logger.Severity) logrus.Level {
+	switch severity {
+	case logger.SeverityVerbose:
+		return logrus.TraceLevel
+	case logger.SeverityDebug:
+		return logrus.DebugLevel
+	case logger.SeverityInfo:
+		return logrus.InfoLevel
+	case logger.SeverityWarning:
+		return logrus.WarnLevel
+	case logger.SeverityError:
+		return logrus.ErrorLevel
+	case logger.SeverityFatal:
+		return logrus.FatalLevel
+	case logger.SeverityPanic:
+		return logrus.PanicLevel
+	default:
+		return logrus.DebugLevel
+	}
 }
 
-func (l *logrusLogger) Info(args ...interface{}) {
-	l.entry.WithField("file", l.fileInfo(2)).Info(args...)
+func (l *logrusLogger) Log(severity logger.Severity, args ...interface{}) {
+	l.entry.WithField("file", l.fileInfo(2)).Log(l.toLogrusSeverity(severity), args...)
 }
 
-func (l *logrusLogger) Infof(format string, args ...interface{}) {
-	l.entry.WithField("file", l.fileInfo(2)).Infof(format, args...)
+func (l *logrusLogger) Logf(severity logger.Severity, format string, args ...interface{}) {
+	l.entry.WithField("file", l.fileInfo(2)).Logf(l.toLogrusSeverity(severity), format, args...)
+}
+
+func (l *logrusLogger) Verbose(args ...interface{}) {
+	l.entry.WithField("file", l.fileInfo(2)).Trace(args...)
+}
+
+func (l *logrusLogger) Verbosef(format string, args ...interface{}) {
+	l.entry.WithField("file", l.fileInfo(2)).Tracef(format, args...)
 }
 
 func (l *logrusLogger) Debug(args ...interface{}) {
@@ -77,6 +103,14 @@ func (l *logrusLogger) Debug(args ...interface{}) {
 
 func (l *logrusLogger) Debugf(format string, args ...interface{}) {
 	l.entry.WithField("file", l.fileInfo(2)).Debugf(format, args...)
+}
+
+func (l *logrusLogger) Info(args ...interface{}) {
+	l.entry.WithField("file", l.fileInfo(2)).Info(args...)
+}
+
+func (l *logrusLogger) Infof(format string, args ...interface{}) {
+	l.entry.WithField("file", l.fileInfo(2)).Infof(format, args...)
 }
 
 func (l *logrusLogger) Warn(args ...interface{}) {
@@ -101,6 +135,14 @@ func (l *logrusLogger) Fatal(args ...interface{}) {
 
 func (l *logrusLogger) Fatalf(format string, args ...interface{}) {
 	l.entry.WithField("file", l.fileInfo(2)).Fatalf(format, args...)
+}
+
+func (l *logrusLogger) Panic(args ...interface{}) {
+	l.entry.WithField("file", l.fileInfo(2)).Panic(args...)
+}
+
+func (l *logrusLogger) Panicf(format string, args ...interface{}) {
+	l.entry.WithField("file", l.fileInfo(2)).Panicf(format, args...)
 }
 
 func (l *logrusLogger) SetOutputFile(path string) error {

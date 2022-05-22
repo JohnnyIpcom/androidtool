@@ -16,6 +16,7 @@ import (
 type DeviceItem struct {
 	device *adbclient.Device
 	check  *widget.Check
+	logs   *widget.Button
 }
 
 // DeviceList is a list of devices
@@ -43,7 +44,10 @@ func (d *DeviceList) CreateItem() fyne.CanvasObject {
 			widget.NewIcon(assets.StatusIcons["invalid"]),
 			widget.NewLabel(""),
 		),
-		widget.NewLabel(""),
+		container.NewHBox(
+			widget.NewLabel(""),
+			widget.NewButtonWithIcon("", assets.LogsIcon, nil),
+		),
 	)
 }
 
@@ -54,10 +58,21 @@ func (d *DeviceList) UpdateItem(id int, item fyne.CanvasObject) {
 	deviceItem := d.items.Load(id)
 	container.Objects[0].(*fyne.Container).Objects[1].(*widget.Icon).SetResource(assets.StatusIcons[deviceItem.device.State.String()])
 	container.Objects[0].(*fyne.Container).Objects[2].(*widget.Label).SetText(deviceItem.device.String())
-	container.Objects[1].(*widget.Label).SetText(strings.ToUpper(deviceItem.device.State.String()))
+	container.Objects[1].(*fyne.Container).Objects[0].(*widget.Label).SetText(strings.ToUpper(deviceItem.device.State.String()))
 	deviceItem.check = container.Objects[0].(*fyne.Container).Objects[0].(*widget.Check)
 	deviceItem.check.OnChanged = func(checked bool) {
 		d.OnCheckChanged(id, checked)
+	}
+
+	deviceItem.logs = container.Objects[1].(*fyne.Container).Objects[1].(*widget.Button)
+	deviceItem.logs.OnTapped = func() {
+		go Logs(d.client, deviceItem.device, d.parent)
+	}
+
+	if deviceItem.device.State == adbclient.StateOnline {
+		deviceItem.logs.Enable()
+	} else {
+		deviceItem.logs.Disable()
 	}
 
 	// Auto-select first device

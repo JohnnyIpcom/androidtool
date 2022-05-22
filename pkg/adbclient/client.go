@@ -10,6 +10,7 @@ import (
 
 	"github.com/johnnyipcom/androidtool/pkg/logger"
 	adb "github.com/zach-klippenstein/goadb"
+	"github.com/zach-klippenstein/goadb/wire"
 )
 
 const (
@@ -21,6 +22,7 @@ const (
 type Client struct {
 	adb    *adb.Adb
 	log    logger.Logger
+	dialer *dialer
 	events chan DeviceStateChangedEvent
 	port   int
 
@@ -29,7 +31,8 @@ type Client struct {
 
 // New creates a new client.
 func NewClient(port int, log logger.Logger) (*Client, error) {
-	config := adb.ServerConfig{Port: port}
+	dialer := &dialer{}
+	config := adb.ServerConfig{Dialer: dialer, Port: port}
 
 	innerLog := log.WithField("component", "ADBClient")
 	innerLog.Infof("Creating ADB client on port %d", port)
@@ -42,6 +45,7 @@ func NewClient(port int, log logger.Logger) (*Client, error) {
 	return &Client{
 		adb:    adb,
 		log:    innerLog,
+		dialer: dialer,
 		port:   port,
 		events: make(chan DeviceStateChangedEvent),
 	}, nil
@@ -282,4 +286,179 @@ func wm(device *adb.Device, prop string) (string, error) {
 func (c *Client) GetProp(device *Device, prop string) (string, error) {
 	c.log.Info("Getting %s...", prop)
 	return getProp(c.adb.Device(adb.DeviceWithSerial(device.Serial)), prop)
+}
+
+// dialDevice returns a connection to the device.
+func (c *Client) dialDevice(device *Device) (*wire.Conn, error) {
+	conn, err := c.adb.Dial()
+	if err != nil {
+		return nil, err
+	}
+
+	req := fmt.Sprintf("host:transport:%s", device.Serial)
+	if err := wire.SendMessageString(conn, req); err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	if _, err := conn.ReadStatus(req); err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	return conn, nil
+}
+
+func (c *Client) sendCommand(device *Device, cmd string) (*wire.Conn, error) {
+	conn, err := c.dialDevice(device)
+	if err != nil {
+		return nil, err
+	}
+
+	req := fmt.Sprintf("shell:%s", cmd)
+	c.log.Debugf("Sending command: %s", req)
+	if err := wire.SendMessageString(conn, req); err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	status, err := conn.ReadStatus(req)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	c.log.Debugf("Got status: %s", status)
+	return conn, nil
+}
+
+func (c *Client) runCommand(device *Device, cmd string, args ...string) (string, error) {
+	conn, err := c.sendCommand(device, cmd)
+	if err != nil {
+		return "", err
+	}
+
+	defer conn.Close()
+	result, err := conn.ReadUntilEof()
+	if err != nil {
+		return "", err
+	}
+
+	return string(result), nil
+}
+
+type logcatOptions struct {
+	tag      string
+	pid      int
+	priority LogcatPriority
+}
+
+func (o logcatOptions) String() string {
+	return fmt.Sprintf("tag:%s pid:%d priority:%s", o.tag, o.pid, o.priority)
+}
+
+func (o logcatOptions) Options() []string {
+	var options []string
+	if o.pid != 0 {
+		options = append(options, fmt.Sprintf("--pid %d", o.pid))
+	}
+
+	// '*' by itself means '*:D' and <tag> by itself means <tag>:V.
+	// If no '*' filterspec or -s on command line, all filter defaults to '*:V'.
+	//  eg: '*:S <tag>' prints only <tag>, '<tag>:S' suppresses all <tag> log messages.
+	if o.tag != "" {
+		if o.priority != Verbose {
+			options = append(options, fmt.Sprintf("-s %s:%s", o.tag, o.priority))
+		} else {
+			options = append(options, fmt.Sprintf("-s %s", o.tag))
+		}
+	} else {
+		if o.priority != Debug {
+			options = append(options, fmt.Sprintf("-s *:%s", o.priority))
+		} else {
+			options = append(options, "-s *")
+		}
+	}
+
+	return options
+}
+
+// LogcatOption is an option for logcat.
+type LogcatOption interface {
+	apply(*logcatOptions) error
+}
+
+type logcatTagOption struct {
+	tag string
+}
+
+func (o logcatTagOption) apply(opts *logcatOptions) error {
+	opts.tag = o.tag
+	return nil
+}
+
+type logcatPidOption struct {
+	pid int
+}
+
+func (o logcatPidOption) apply(opts *logcatOptions) error {
+	opts.pid = o.pid
+	return nil
+}
+
+type logcatPriorityOption struct {
+	priority LogcatPriority
+}
+
+func (o logcatPriorityOption) apply(opts *logcatOptions) error {
+	opts.priority = o.priority
+	return nil
+}
+
+func WithLogcatTag(tag string) LogcatOption {
+	return logcatTagOption{tag}
+}
+
+func WithLogcatPid(pid int) LogcatOption {
+	return logcatPidOption{pid}
+}
+
+func WithLogcatPriority(priority LogcatPriority) LogcatOption {
+	return logcatPriorityOption{priority}
+}
+
+func (c *Client) ClearLogcat(device *Device) error {
+	c.log.Info("Clearing logcat...")
+	resp, err := c.runCommand(device, "logcat -c")
+	if err != nil {
+		return err
+	}
+
+	c.log.Debugf("Got response: %s", resp)
+	return nil
+}
+
+// Logcat returns a logcat watcher.
+func (c *Client) Logcat(ctx context.Context, device *Device, opts ...LogcatOption) (*LogcatWatcher, error) {
+	c.log.Info("Getting logcat...")
+
+	var options logcatOptions
+	for _, opt := range opts {
+		err := opt.apply(&options)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	conn, err := c.sendCommand(device, fmt.Sprintf("logcat -v threadtime %s", strings.Join(options.Options(), " ")))
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	return &LogcatWatcher{
+		reader: c.dialer.reader,
+		conn:   conn,
+		log:    c.log.WithField("device", device.Serial),
+	}, nil
 }

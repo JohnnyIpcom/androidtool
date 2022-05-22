@@ -49,9 +49,8 @@ func (m *main) buildUI() *fyne.Container {
 	installAABButton := widget.NewButton("Install *.aab", m.onInstallAAB)
 	installAABButton.SetIcon(assets.InstallIcon)
 
-	return container.NewVBox(
-		widget.NewLabel("Devices:"),
-		container.NewMax(rect, m.deviceList),
+	return container.NewBorder(
+		nil,
 		container.NewGridWithColumns(
 			2,
 			widget.NewCard(
@@ -69,6 +68,15 @@ func (m *main) buildUI() *fyne.Container {
 					m.useCustomKeystoreCheck,
 					installAABButton,
 				),
+			),
+		),
+		nil,
+		nil,
+		container.NewMax(
+			widget.NewCard(
+				"",
+				"Devices:",
+				m.deviceList,
 			),
 		),
 	)

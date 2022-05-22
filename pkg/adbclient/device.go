@@ -110,6 +110,7 @@ func (d *Device) SetState(deviceState DeviceState) {
 	d.State = deviceState
 }
 
+// String implements the fmt.Stringer interface.
 func (d *Device) String() string {
 	return fmt.Sprintf("%s (%s)", d.Serial, d.Model)
 }
