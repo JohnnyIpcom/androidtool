@@ -1,14 +1,13 @@
 package ui
 
 import (
-	"context"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/johnnyipcom/androidtool/internal/assets"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
 )
 
@@ -43,8 +42,8 @@ func Logs(client *adbclient.Client, device *adbclient.Device, parent fyne.Window
 		fsaveDialog.Show()
 	})
 
-	logsStartButton := widget.NewButtonWithIcon("", theme.MediaRecordIcon(), nil)
-	logsStopButton := widget.NewButtonWithIcon("", theme.MediaStopIcon(), nil)
+	logsStartButton := widget.NewButtonWithIcon("Start", assets.LogsIcon, nil)
+	logsStopButton := widget.NewButtonWithIcon("Stop", theme.MediaStopIcon(), nil)
 	logsStopButton.Disable()
 
 	dialog := dialog.NewCustom(
@@ -69,17 +68,13 @@ func Logs(client *adbclient.Client, device *adbclient.Device, parent fyne.Window
 		parent,
 	)
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	logcat, err := client.Logcat(ctx, device)
+	logcat, err := client.Logcat(device)
 	if err != nil {
 		ShowError(err, nil, parent)
-		cancel()
 		return
 	}
 
 	dialog.SetOnClosed(func() {
-		cancel()
 		logcat.Close()
 	})
 

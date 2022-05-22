@@ -14,9 +14,10 @@ import (
 
 // DeviceItem is a single device item
 type DeviceItem struct {
-	device *adbclient.Device
-	check  *widget.Check
-	logs   *widget.Button
+	device     *adbclient.Device
+	check      *widget.Check
+	logs       *widget.Button
+	screenshot *widget.Button
 }
 
 // DeviceList is a list of devices
@@ -42,11 +43,12 @@ func (d *DeviceList) CreateItem() fyne.CanvasObject {
 		container.NewHBox(
 			widget.NewCheck("", nil),
 			widget.NewIcon(assets.StatusIcons["invalid"]),
-			widget.NewLabel(""),
+			widget.NewLabel("<SERIAL>"),
 		),
 		container.NewHBox(
-			widget.NewLabel(""),
+			widget.NewLabel("INVALID"),
 			widget.NewButtonWithIcon("", assets.LogsIcon, nil),
+			widget.NewButtonWithIcon("", assets.ScreenshotIcon, nil),
 		),
 	)
 }
@@ -69,10 +71,17 @@ func (d *DeviceList) UpdateItem(id int, item fyne.CanvasObject) {
 		go Logs(d.client, deviceItem.device, d.parent)
 	}
 
+	deviceItem.screenshot = container.Objects[1].(*fyne.Container).Objects[2].(*widget.Button)
+	deviceItem.screenshot.OnTapped = func() {
+		go Screenshot(d.client, deviceItem.device, d.parent)
+	}
+
 	if deviceItem.device.State == adbclient.StateOnline {
 		deviceItem.logs.Enable()
+		deviceItem.screenshot.Enable()
 	} else {
 		deviceItem.logs.Disable()
+		deviceItem.screenshot.Disable()
 	}
 
 	// Auto-select first device

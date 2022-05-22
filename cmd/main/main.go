@@ -34,7 +34,7 @@ func main() {
 			layout.NewSpacer(),
 		),
 	)
-	
+
 	uiChan := make(chan fyne.CanvasObject)
 	go func() {
 		uiChan <- ui.SetupUI(a, w)
@@ -44,7 +44,7 @@ func main() {
 	go func() {
 		w.SetContent(<-uiChan)
 		w.CenterOnScreen()
-		w.Resize(fyne.NewSize(700, 400))
+		w.Resize(fyne.NewSize(800, 500))
 		w.Show()
 
 		splash.Close()

@@ -1,8 +1,11 @@
 package adbclient
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"image/png"
 	"io"
 	"os"
 	"strings"
@@ -332,19 +335,19 @@ func (c *Client) sendCommand(device *Device, cmd string) (*wire.Conn, error) {
 	return conn, nil
 }
 
-func (c *Client) runCommand(device *Device, cmd string, args ...string) (string, error) {
+func (c *Client) runCommand(device *Device, cmd string, args ...string) ([]byte, error) {
 	conn, err := c.sendCommand(device, cmd)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	defer conn.Close()
 	result, err := conn.ReadUntilEof()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(result), nil
+	return result, nil
 }
 
 type logcatOptions struct {
@@ -439,7 +442,7 @@ func (c *Client) ClearLogcat(device *Device) error {
 }
 
 // Logcat returns a logcat watcher.
-func (c *Client) Logcat(ctx context.Context, device *Device, opts ...LogcatOption) (*LogcatWatcher, error) {
+func (c *Client) Logcat(device *Device, opts ...LogcatOption) (*LogcatWatcher, error) {
 	c.log.Info("Getting logcat...")
 
 	var options logcatOptions
@@ -461,4 +464,19 @@ func (c *Client) Logcat(ctx context.Context, device *Device, opts ...LogcatOptio
 		conn:   conn,
 		log:    c.log.WithField("device", device.Serial),
 	}, nil
+}
+
+func (c *Client) Screenshot(device *Device) (image.Image, error) {
+	c.log.Info("Taking screenshot...")
+	resp, err := c.runCommand(device, "screencap -p")
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := png.Decode(bytes.NewReader(resp))
+	if err != nil {
+		return nil, err
+	}
+
+	return img, nil
 }

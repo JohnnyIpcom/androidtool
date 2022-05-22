@@ -13,6 +13,7 @@ import "fyne.io/fyne/v2"
 //go:generate fyne bundle -package assets -o bundled.go -append icon_main.png
 //go:generate fyne bundle -package assets -o bundled.go -append icon_install.png
 //go:generate fyne bundle -package assets -o bundled.go -append icon_logs.svg
+//go:generate fyne bundle -package assets -o bundled.go -append icon_screenshot.svg
 
 // IconApp is the icon for the application
 var AppIcon = resourceIconappPng
@@ -31,6 +32,9 @@ var InstallIcon = resourceIconinstallPng
 
 // LogsIcon is the icon for the logs button
 var LogsIcon = resourceIconlogsSvg
+
+// ScreenshotIcon is the icon for the screenshot button
+var ScreenshotIcon = resourceIconscreenshotSvg
 
 // StatusIcons are the icons for the status of the device
 var StatusIcons map[string]*fyne.StaticResource = map[string]*fyne.StaticResource{
