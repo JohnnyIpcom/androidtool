@@ -14,9 +14,17 @@ type ProgressBar struct {
 	widget.ProgressBar
 }
 
-func (p *ProgressBar) WithProgress() adbclient.UploadOption {
+func (p *ProgressBar) WithUploadProgress() adbclient.UploadOption {
 	once := sync.Once{}
-	return adbclient.WithProgress(func(sentBytes int64, totalBytes int64) {
+	return adbclient.WithUploadProgress(func(sentBytes int64, totalBytes int64) {
+		once.Do(func() { p.Max = float64(totalBytes) })
+		p.SetValue(float64(sentBytes))
+	})
+}
+
+func (p *ProgressBar) WithDownloadProgress() adbclient.DownloadOption {
+	once := sync.Once{}
+	return adbclient.WithDownloadProgress(func(sentBytes int64, totalBytes int64) {
 		once.Do(func() { p.Max = float64(totalBytes) })
 		p.SetValue(float64(sentBytes))
 	})
@@ -33,15 +41,14 @@ func (p *ProgressBar) Done() {
 	p.SetValue(p.Max)
 }
 
-// Failed sets the text to indicate a failure.
-func (p *ProgressBar) Install() {
-	p.TextFormatter = func() string { return "Installing..." }
-	p.Refresh()
-}
+// SetText sets the text of the ProgressBar. Send an empty string to hide the text and return to the default.
+func (p *ProgressBar) SetText(text string) {
+	if len(text) > 0 {
+		p.TextFormatter = func() string { return text }
+	} else {
+		p.TextFormatter = nil
+	}
 
-// Failed sets the text to indicate a failure.
-func (p *ProgressBar) Failed() {
-	p.TextFormatter = func() string { return "Failed" }
 	p.Refresh()
 }
 

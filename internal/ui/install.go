@@ -30,7 +30,7 @@ func InstallAPK(client *adbclient.Client, serial string, file fyne.URIReadCloser
 	d.SetOnClosed(cancel)
 
 	onError := func(err error) {
-		bar.Failed()
+		bar.SetText("Failed")
 		ShowError(err, d.Hide, parent)
 	}
 
@@ -41,14 +41,20 @@ func InstallAPK(client *adbclient.Client, serial string, file fyne.URIReadCloser
 	}
 
 	apkPath := client.GetInstallPath()
-	if err := client.Upload(ctx, device, file.URI().Path(), apkPath, bar.WithProgress()); err != nil {
+	if err := client.Upload(ctx, device, file.URI().Path(), apkPath, bar.WithUploadProgress()); err != nil {
 		onError(err)
 		return
 	}
 
-	bar.Install()
-	result, err := client.Install(device, apkPath)
+	defer func() {
+		if err := client.RemoveFile(device, apkPath); err != nil {
+			ShowError(err, nil, parent)
+		}
+	}()
 
+	bar.SetText("Installing APK...")
+
+	result, err := client.Install(device, apkPath)
 	if err != nil {
 		onError(err)
 		return

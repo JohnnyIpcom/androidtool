@@ -30,6 +30,7 @@ type settings struct {
 	logPathButton          *widget.Button
 	logPathEntry           *widget.Entry
 	installPathEntry       *widget.Entry
+	videoPathEntry         *widget.Entry
 	adbPortEntry           *widget.Entry
 	bundletoolVersionEntry *widget.Entry
 }
@@ -48,6 +49,11 @@ func uiSettings(app fyne.App, parent fyne.Window, adbClient *adbclient.Client, a
 func (s *settings) onInstallPathSubmitted(path string) {
 	s.prefs.SetString("install_path", path)
 	s.adbClient.SetInstallPath(path)
+}
+
+func (s *settings) onVideoPathSubmitted(path string) {
+	s.prefs.SetString("video_path", path)
+	s.adbClient.SetVideoPath(path)
 }
 
 func (s *settings) onADBPortSubmitted(port string) {
@@ -147,6 +153,11 @@ func (s *settings) buildADBUI() fyne.CanvasObject {
 		OnSubmitted: s.onInstallPathSubmitted,
 	}
 
+	s.videoPathEntry = &widget.Entry{
+		PlaceHolder: adbclient.DefaultVideoPath,
+		OnSubmitted: s.onVideoPathSubmitted,
+	}
+
 	s.adbPortEntry = &widget.Entry{
 		PlaceHolder: strconv.FormatInt(adbclient.DefaultPort, 10),
 		OnSubmitted: s.onADBPortSubmitted,
@@ -166,9 +177,12 @@ func (s *settings) buildADBUI() fyne.CanvasObject {
 	}
 
 	return container.NewVBox(
-		container.NewGridWithColumns(2,
+		container.NewGridWithColumns(
+			2,
 			NewBoldLabel("Install path:"),
 			s.installPathEntry,
+			NewBoldLabel("Video path:"),
+			s.videoPathEntry,
 		),
 		widget.NewAccordion(
 			widget.NewAccordionItem(

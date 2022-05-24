@@ -176,7 +176,7 @@ func Screenshot(client *adbclient.Client, device *adbclient.Device, parent fyne.
 	})
 
 	makeScreenshotButton := widget.NewButtonWithIcon("Screenshot", assets.ScreenshotIcon, func() {
-		screenshot, err := client.Screenshot(device)
+		screenshot, err := client.Screenshot(device, adbclient.WithScreenshotAsPng())
 		if err != nil {
 			ShowError(err, nil, parent)
 			return

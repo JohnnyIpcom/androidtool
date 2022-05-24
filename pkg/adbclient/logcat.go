@@ -7,6 +7,7 @@ import (
 	"io"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/johnnyipcom/androidtool/pkg/logger"
@@ -190,4 +191,124 @@ func (w *LogcatWatcher) C(ctx context.Context) <-chan LogcatMessage {
 // Read implements io.Reader.
 func (w *LogcatWatcher) Read(p []byte) (int, error) {
 	return w.reader.Read(p)
+}
+
+type logcatOptions struct {
+	tag      string
+	pid      int
+	priority LogcatPriority
+}
+
+func (o logcatOptions) String() string {
+	return fmt.Sprintf("tag:%s pid:%d priority:%s", o.tag, o.pid, o.priority)
+}
+
+func (o logcatOptions) Options() []string {
+	var options []string
+	if o.pid != 0 {
+		options = append(options, fmt.Sprintf("--pid %d", o.pid))
+	}
+
+	// '*' by itself means '*:D' and <tag> by itself means <tag>:V.
+	// If no '*' filterspec or -s on command line, all filter defaults to '*:V'.
+	//  eg: '*:S <tag>' prints only <tag>, '<tag>:S' suppresses all <tag> log messages.
+	if o.tag != "" {
+		if o.priority != Verbose {
+			options = append(options, fmt.Sprintf("-s %s:%s", o.tag, o.priority))
+		} else {
+			options = append(options, fmt.Sprintf("-s %s", o.tag))
+		}
+	} else {
+		if o.priority != Debug {
+			options = append(options, fmt.Sprintf("-s *:%s", o.priority))
+		} else {
+			options = append(options, "-s *")
+		}
+	}
+
+	return options
+}
+
+// LogcatOption is an option for logcat.
+type LogcatOption interface {
+	apply(*logcatOptions) error
+}
+
+type logcatTagOption struct {
+	tag string
+}
+
+func (o logcatTagOption) apply(opts *logcatOptions) error {
+	opts.tag = o.tag
+	return nil
+}
+
+type logcatPidOption struct {
+	pid int
+}
+
+func (o logcatPidOption) apply(opts *logcatOptions) error {
+	opts.pid = o.pid
+	return nil
+}
+
+type logcatPriorityOption struct {
+	priority LogcatPriority
+}
+
+func (o logcatPriorityOption) apply(opts *logcatOptions) error {
+	opts.priority = o.priority
+	return nil
+}
+
+// WithLogcatTag sets the tag for logcat.
+func WithLogcatTag(tag string) LogcatOption {
+	return logcatTagOption{tag}
+}
+
+// WithLogcatPid sets the pid for logcat.
+func WithLogcatPid(pid int) LogcatOption {
+	return logcatPidOption{pid}
+}
+
+// WithLogcatPriority sets the priority for logcat.
+func WithLogcatPriority(priority LogcatPriority) LogcatOption {
+	return logcatPriorityOption{priority}
+}
+
+// ClearLogcat clears the logcat output.
+func (c *Client) ClearLogcat(device *Device) error {
+	c.log.Info("Clearing logcat...")
+	resp, err := c.runCommand(device, "logcat -c")
+	if err != nil {
+		return err
+	}
+
+	c.log.Debugf("Got response: %s", resp)
+	return nil
+}
+
+// Logcat returns a watcher that will stream the logcat output and parse it to a LogcatMessage.
+func (c *Client) Logcat(device *Device, opts ...LogcatOption) (*LogcatWatcher, error) {
+	c.log.Info("Getting logcat...")
+
+	var options logcatOptions
+	for _, opt := range opts {
+		err := opt.apply(&options)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	conn, err := c.sendCommand(device, fmt.Sprintf("logcat -v threadtime %s", strings.Join(options.Options(), " ")))
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	return &LogcatWatcher{
+		reader: c.dialer.reader,
+		conn:   conn,
+		log:    c.log.WithField("device", device.Serial),
+	}, nil
 }

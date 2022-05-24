@@ -18,6 +18,7 @@ type DeviceItem struct {
 	check      *widget.Check
 	logs       *widget.Button
 	screenshot *widget.Button
+	video      *widget.Button
 }
 
 // DeviceList is a list of devices
@@ -49,6 +50,7 @@ func (d *DeviceList) CreateItem() fyne.CanvasObject {
 			widget.NewLabel("INVALID"),
 			widget.NewButtonWithIcon("", assets.LogsIcon, nil),
 			widget.NewButtonWithIcon("", assets.ScreenshotIcon, nil),
+			widget.NewButtonWithIcon("", assets.VideoIcon, nil),
 		),
 	)
 }
@@ -76,12 +78,19 @@ func (d *DeviceList) UpdateItem(id int, item fyne.CanvasObject) {
 		go Screenshot(d.client, deviceItem.device, d.parent)
 	}
 
+	deviceItem.video = container.Objects[1].(*fyne.Container).Objects[3].(*widget.Button)
+	deviceItem.video.OnTapped = func() {
+		go Video(d.client, deviceItem.device, d.parent)
+	}
+
 	if deviceItem.device.State == adbclient.StateOnline {
 		deviceItem.logs.Enable()
 		deviceItem.screenshot.Enable()
+		deviceItem.video.Enable()
 	} else {
 		deviceItem.logs.Disable()
 		deviceItem.screenshot.Disable()
+		deviceItem.video.Disable()
 	}
 
 	// Auto-select first device
