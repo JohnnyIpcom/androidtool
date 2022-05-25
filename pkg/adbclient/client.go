@@ -3,6 +3,7 @@ package adbclient
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -313,6 +314,24 @@ func (c *Client) RemoveFile(device *Device, path string) error {
 	c.log.Infof("Removing %s...", path)
 
 	resp, err := c.runCommand(device, "rm -f -v", path)
+	if err != nil {
+		return err
+	}
+
+	c.log.Debug(string(resp))
+	return nil
+}
+
+// SendLink start a browser and send a link to the device.
+func (c *Client) SendLink(device *Device, link string) error {
+	c.log.Infof("Sending link %s...", link)
+
+	_, err := url.ParseRequestURI(link)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.runCommand(device, "am", "start", "-a", "android.intent.action.VIEW", "-d", link)
 	if err != nil {
 		return err
 	}

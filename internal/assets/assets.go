@@ -15,6 +15,7 @@ import "fyne.io/fyne/v2"
 //go:generate fyne bundle -package assets -o bundled.go -append icon_logs.svg
 //go:generate fyne bundle -package assets -o bundled.go -append icon_screenshot.svg
 //go:generate fyne bundle -package assets -o bundled.go -append icon_video.svg
+//go:generate fyne bundle -package assets -o bundled.go -append icon_send.svg
 
 // IconApp is the icon for the application
 var AppIcon = resourceIconappPng
@@ -39,6 +40,9 @@ var ScreenshotIcon = resourceIconscreenshotSvg
 
 // VideoIcon is the icon for the video button
 var VideoIcon = resourceIconvideoSvg
+
+// SendIcon is the icon for the send button
+var SendIcon = resourceIconsendSvg
 
 // StatusIcons are the icons for the status of the device
 var StatusIcons map[string]*fyne.StaticResource = map[string]*fyne.StaticResource{

@@ -144,7 +144,13 @@ func (s *settings) buildAndroidToolUI() fyne.CanvasObject {
 		s.onLogPathButtonClicked,
 	)
 
-	return container.New(&alignToRightLayout{}, s.logPathEntry, s.logPathButton)
+	return container.NewVBox(
+		container.NewGridWithColumns(
+			2,
+			NewBoldLabel("Log path:"),
+			container.New(&alignToRightLayout{}, s.logPathEntry, s.logPathButton),
+		),
+	)
 }
 
 func (s *settings) buildADBUI() fyne.CanvasObject {
