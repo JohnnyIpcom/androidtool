@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/johnnyipcom/androidtool/internal/assets"
+	"github.com/johnnyipcom/androidtool/internal/ui/util"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
 )
 
@@ -78,7 +79,7 @@ func Logs(client *adbclient.Client, device *adbclient.Device, parent fyne.Window
 		logcat.Close()
 	})
 
-	fileSaver, err := NewFileSaver(logcat)
+	fileSaver, err := util.NewFileSaver(logcat)
 	if err != nil {
 		ShowError(err, nil, parent)
 		return

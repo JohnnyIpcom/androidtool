@@ -19,24 +19,24 @@ import (
 type main struct {
 	app       fyne.App
 	parent    fyne.Window
-	adbclient *adbclient.Client
-	aabclient *aabclient.Client
+	adbClient *adbclient.Client
+	aabClient *aabclient.Client
 
 	deviceList             *DeviceList
 	useCustomKeystoreCheck *widget.Check
 }
 
-func uiMain(app fyne.App, parent fyne.Window, adbclient *adbclient.Client, aabClient *aabclient.Client) *main {
+func uiMain(app fyne.App, parent fyne.Window, adbClient *adbclient.Client, aabClient *aabclient.Client) *main {
 	return &main{
 		app:       app,
 		parent:    parent,
-		adbclient: adbclient,
-		aabclient: aabClient,
+		adbClient: adbClient,
+		aabClient: aabClient,
 	}
 }
 
 func (m *main) buildUI() *fyne.Container {
-	m.deviceList = NewDeviceList(m.adbclient, m.parent)
+	m.deviceList = NewDeviceList(m.adbClient, m.parent)
 
 	rect := canvas.NewRectangle(color.Transparent)
 	rect.SetMinSize(fyne.NewSize(0, 75))
@@ -104,7 +104,7 @@ func (m *main) onInstallAPK() {
 
 		go func() {
 			defer file.Close()
-			InstallAPK(m.adbclient, device.Serial, file, m.parent)
+			InstallAPK(m.adbClient, device.Serial, file, m.parent)
 		}()
 	}, m.parent)
 
@@ -132,7 +132,7 @@ func (m *main) onInstallAAB() {
 
 		go func() {
 			defer file.Close()
-			InstallAAB(m.aabclient, device.Serial, file, m.getCustomKeystore(), m.parent)
+			InstallAAB(m.aabClient, device.Serial, file, m.getCustomKeystore(), m.parent)
 		}()
 	}, m.parent)
 

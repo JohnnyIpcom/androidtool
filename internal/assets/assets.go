@@ -16,12 +16,19 @@ import "fyne.io/fyne/v2"
 //go:generate fyne bundle -package assets -o bundled.go -append icon_screenshot.svg
 //go:generate fyne bundle -package assets -o bundled.go -append icon_video.svg
 //go:generate fyne bundle -package assets -o bundled.go -append icon_send.svg
+//go:generate fyne bundle -package assets -o bundled.go -append icon_builds.png
+//go:generate fyne bundle -package assets -o bundled.go -append icon_apk.png
+//go:generate fyne bundle -package assets -o bundled.go -append icon_aab.png
+//go:generate fyne bundle -package assets -o bundled.go -append icon_abi.svg
 
 // IconApp is the icon for the application
 var AppIcon = resourceIconappPng
 
 // MainTabIcon is the icon for the main tab
 var MainTabIcon = resourceIconmainPng
+
+// BuildsTabIcon is the icon for the builds tab
+var BuildsTabIcon = resourceIconbuildsPng
 
 // AboutTabIcon is the icon for the about tab
 var AboutTabIcon = resourceIconaboutPng
@@ -43,6 +50,15 @@ var VideoIcon = resourceIconvideoSvg
 
 // SendIcon is the icon for the send button
 var SendIcon = resourceIconsendSvg
+
+// IconAPK is the icon for the APK file
+var APKIcon = resourceIconapkPng
+
+// IconAAB is the icon for the AAB file
+var AABIcon = resourceIconaabPng
+
+// IconABI is the icon for the ABI file
+var ABIIcon = resourceIconabiSvg
 
 // StatusIcons are the icons for the status of the device
 var StatusIcons map[string]*fyne.StaticResource = map[string]*fyne.StaticResource{

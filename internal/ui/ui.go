@@ -6,6 +6,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"github.com/johnnyipcom/androidtool/pkg/aabclient"
+	"github.com/johnnyipcom/androidtool/pkg/aapt"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
 	"github.com/johnnyipcom/androidtool/pkg/logger/logrus"
 )
@@ -41,6 +42,11 @@ func SetupUI(app fyne.App, parent fyne.Window) fyne.CanvasObject {
 		log.Fatal(err)
 	}
 
+	aapt, err := aapt.New(log)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	parent.SetOnClosed(func() {
 		cancel()
 		adbClient.Stop()
@@ -49,6 +55,7 @@ func SetupUI(app fyne.App, parent fyne.Window) fyne.CanvasObject {
 
 	return &container.AppTabs{Items: []*container.TabItem{
 		uiMain(app, parent, adbClient, aabClient).tabItem(),
+		uiBuilds(app, parent, aabClient, aapt).tabItem(),
 		uiSettings(app, parent, adbClient, aabClient, log).tabItem(),
 		uiAbout(adbClient).tabItem(),
 	}}
