@@ -2,16 +2,10 @@ package ui
 
 import (
 	"fmt"
-	"image/color"
-	"os"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/data/binding"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"github.com/c2h5oh/datasize"
 	"github.com/johnnyipcom/androidtool/internal/assets"
 	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/aapt"
@@ -48,14 +42,13 @@ func (b BuildType) Icon() fyne.Resource {
 
 // Build is a struct that contains the information about a build.
 type Build struct {
-	Type     BuildType
-	Path     string
-	APKsPath string
-	ABIList  []string
-	MinSize  datasize.ByteSize
-	MaxSize  datasize.ByteSize
+	Type         BuildType
+	Path         string
+	APKsPath     string
+	UnpackedPath string
 
 	abi      *widget.Button
+	sizes    *widget.Button
 	manifest *widget.Button
 }
 
@@ -82,6 +75,7 @@ func (b *BuildList) CreateItem() fyne.CanvasObject {
 		),
 		container.NewHBox(
 			widget.NewButtonWithIcon("", assets.ABIIcon, nil),
+			widget.NewButtonWithIcon("", assets.SizesIcon, nil),
 			widget.NewButtonWithIcon("", assets.ManifestIcon, nil),
 		),
 	)
@@ -95,10 +89,37 @@ func (b *BuildList) UpdateItem(id int, item fyne.CanvasObject) {
 	c.Objects[0].(*fyne.Container).Objects[1].(*widget.Label).SetText(buildItem.Path)
 	buildItem.abi = c.Objects[1].(*fyne.Container).Objects[0].(*widget.Button)
 	buildItem.abi.OnTapped = func() {
-		go b.onABIButtonTapped(buildItem)
+		go func() {
+			switch buildItem.Type {
+			case BuildTypeAPK:
+				APKABIInfo(b.aapt, buildItem.Path, b.parent)
+
+			case BuildTypeAAB:
+				AABABIInfo(b.aabClient, b.aapt, buildItem.UnpackedPath, b.parent)
+
+			default:
+				ShowError(fmt.Errorf("unknown build type: %s", buildItem.Type), nil, b.parent)
+			}
+		}()
 	}
 
-	buildItem.manifest = c.Objects[1].(*fyne.Container).Objects[1].(*widget.Button)
+	buildItem.sizes = c.Objects[1].(*fyne.Container).Objects[1].(*widget.Button)
+	buildItem.sizes.OnTapped = func() {
+		go func() {
+			switch buildItem.Type {
+			case BuildTypeAPK:
+				APKSizes(buildItem.Path, b.parent)
+
+			case BuildTypeAAB:
+				AABSizes(b.aabClient, buildItem.APKsPath, b.parent)
+
+			default:
+				ShowError(fmt.Errorf("unknown build type: %s", buildItem.Type), nil, b.parent)
+			}
+		}()
+	}
+
+	buildItem.manifest = c.Objects[1].(*fyne.Container).Objects[2].(*widget.Button)
 	buildItem.manifest.OnTapped = func() {
 		go func() {
 			switch buildItem.Type {
@@ -119,77 +140,11 @@ func (b *BuildList) OnSelected(id int) {
 	b.Unselect(id)
 }
 
-func (b *BuildList) onABIButtonTapped(buildItem *Build) {
-	if len(buildItem.ABIList) == 0 {
-		ShowInformation("ABI Info", "No ABIs found", b.parent)
-		return
-	}
-
-	data := binding.BindStringList(&buildItem.ABIList)
-	list := widget.NewListWithData(
-		data,
-		func() fyne.CanvasObject {
-			return widget.NewLabel("<ABI>")
-		},
-		func(i binding.DataItem, o fyne.CanvasObject) {
-			o.(*widget.Label).Bind(i.(binding.String))
-		},
-	)
-
-	rect := canvas.NewRectangle(color.Transparent)
-	rect.SetMinSize(fyne.NewSize(310, 200))
-
-	minSizeLabel := widget.NewLabel(fmt.Sprintf("%s (%d)", buildItem.MinSize.HumanReadable(), buildItem.MinSize.Bytes()))
-	maxSizeLabel := widget.NewLabel(fmt.Sprintf("%s (%d)", buildItem.MaxSize.HumanReadable(), buildItem.MaxSize.Bytes()))
-
-	dialog.ShowCustom(
-		"ABI Info",
-		"Close",
-		container.NewVBox(
-			widget.NewCard(
-				"",
-				"ABIs:",
-				container.NewMax(
-					rect,
-					list,
-				),
-			),
-			widget.NewCard(
-				"",
-				"Sizes:",
-				container.NewGridWithColumns(
-					2,
-					widget.NewLabel("Min:"),
-					minSizeLabel,
-					widget.NewLabel("Max:"),
-					maxSizeLabel,
-				),
-			),
-		),
-		b.parent,
-	)
-}
-
 func (b *BuildList) LoadAPK(path string) {
-	stat, err := os.Stat(path)
-	if err != nil {
-		ShowError(err, nil, b.parent)
-		return
-	}
-
-	abis, err := b.aapt.GetNativeCodeABIs(path)
-	if err != nil {
-		ShowError(err, nil, b.parent)
-		return
-	}
-
 	b.items.Store(
 		&Build{
-			Type:    BuildTypeAPK,
-			Path:    path,
-			ABIList: abis,
-			MinSize: datasize.ByteSize(stat.Size()),
-			MaxSize: datasize.ByteSize(stat.Size()),
+			Type: BuildTypeAPK,
+			Path: path,
 		},
 	)
 
@@ -217,11 +172,10 @@ func (b *BuildList) LoadAAB(path string, useCachedData bool) {
 
 	b.items.Store(
 		&Build{
-			Type:    BuildTypeAAB,
-			Path:    path,
-			ABIList: aabInfo.ABIList,
-			MinSize: datasize.ByteSize(aabInfo.MinSize),
-			MaxSize: datasize.ByteSize(aabInfo.MaxSize),
+			Type:         BuildTypeAAB,
+			Path:         path,
+			APKsPath:     aabInfo.APKsPath,
+			UnpackedPath: aabInfo.UnpackedPath,
 		},
 	)
 

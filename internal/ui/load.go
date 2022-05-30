@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"image/color"
-	"io/fs"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -16,14 +15,11 @@ import (
 	"github.com/johnnyipcom/androidtool/internal/ui/util"
 	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/aapt"
-	"github.com/johnnyipcom/androidtool/pkg/generic"
 )
 
 type AABInfo struct {
-	APKsPath string
-	ABIList  []string
-	MinSize  uint64
-	MaxSize  uint64
+	APKsPath     string
+	UnpackedPath string
 }
 
 func LoadAAB(client *aabclient.Client, aapt *aapt.AAPT, path string, useCachedData bool, parent fyne.Window) (*AABInfo, error) {
@@ -74,49 +70,9 @@ func LoadAAB(client *aabclient.Client, aapt *aapt.AAPT, path string, useCachedDa
 		}
 	}
 
-	bar.SetText("Parsing APKs...")
-
-	abiSet := generic.NewSet[string]()
-	if err := filepath.Walk(destDir, func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		if strings.HasSuffix(info.Name(), ".apk") {
-			abis, err := aapt.GetNativeCodeABIs(path)
-			if err != nil {
-				return err
-			}
-
-			for _, abi := range abis {
-				if len(abi) > 0 {
-					abiSet.Store(abi)
-				}
-			}
-		}
-
-		return nil
-	}); err != nil {
-		onError("", err)
-		return nil, err
-	}
-
-	bar.SetText("Calculating sizes...")
-	min, max, err := client.GetMinMaxSizes(ctx, apksFile)
-	if err != nil {
-		onError("", err)
-		return nil, err
-	}
-
 	d.Hide()
 	return &AABInfo{
-		APKsPath: apksFile,
-		ABIList:  abiSet.Keys(),
-		MinSize:  min,
-		MaxSize:  max,
+		APKsPath:     apksFile,
+		UnpackedPath: destDir,
 	}, nil
 }
