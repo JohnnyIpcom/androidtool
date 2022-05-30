@@ -48,13 +48,15 @@ func (b BuildType) Icon() fyne.Resource {
 
 // Build is a struct that contains the information about a build.
 type Build struct {
-	Type    BuildType
-	Path    string
-	ABIList []string
-	MinSize datasize.ByteSize
-	MaxSize datasize.ByteSize
+	Type     BuildType
+	Path     string
+	APKsPath string
+	ABIList  []string
+	MinSize  datasize.ByteSize
+	MaxSize  datasize.ByteSize
 
-	abi *widget.Button
+	abi      *widget.Button
+	manifest *widget.Button
 }
 
 type BuildList struct {
@@ -80,6 +82,7 @@ func (b *BuildList) CreateItem() fyne.CanvasObject {
 		),
 		container.NewHBox(
 			widget.NewButtonWithIcon("", assets.ABIIcon, nil),
+			widget.NewButtonWithIcon("", assets.ManifestIcon, nil),
 		),
 	)
 }
@@ -92,59 +95,79 @@ func (b *BuildList) UpdateItem(id int, item fyne.CanvasObject) {
 	c.Objects[0].(*fyne.Container).Objects[1].(*widget.Label).SetText(buildItem.Path)
 	buildItem.abi = c.Objects[1].(*fyne.Container).Objects[0].(*widget.Button)
 	buildItem.abi.OnTapped = func() {
-		if len(buildItem.ABIList) == 0 {
-			ShowInformation("ABI Info", "No ABIs found", b.parent)
-			return
-		}
+		go b.onABIButtonTapped(buildItem)
+	}
 
-		data := binding.BindStringList(&buildItem.ABIList)
-		list := widget.NewListWithData(
-			data,
-			func() fyne.CanvasObject {
-				return widget.NewLabel("<ABI>")
-			},
-			func(i binding.DataItem, o fyne.CanvasObject) {
-				o.(*widget.Label).Bind(i.(binding.String))
-			},
-		)
+	buildItem.manifest = c.Objects[1].(*fyne.Container).Objects[1].(*widget.Button)
+	buildItem.manifest.OnTapped = func() {
+		go func() {
+			switch buildItem.Type {
+			case BuildTypeAPK:
+				APKManifest(b.aapt, buildItem.Path, b.parent)
 
-		rect := canvas.NewRectangle(color.Transparent)
-		rect.SetMinSize(fyne.NewSize(310, 200))
+			case BuildTypeAAB:
+				AABManifest(b.aabClient, buildItem.Path, b.parent)
 
-		minSizeLabel := widget.NewLabel(fmt.Sprintf("%s (%d)", buildItem.MinSize.HumanReadable(), buildItem.MinSize.Bytes()))
-		maxSizeLabel := widget.NewLabel(fmt.Sprintf("%s (%d)", buildItem.MaxSize.HumanReadable(), buildItem.MaxSize.Bytes()))
-
-		dialog.ShowCustom(
-			"ABI Info",
-			"Close",
-			container.NewVBox(
-				widget.NewCard(
-					"",
-					"ABIs:",
-					container.NewMax(
-						rect,
-						list,
-					),
-				),
-				widget.NewCard(
-					"",
-					"Sizes:",
-					container.NewGridWithColumns(
-						2,
-						widget.NewLabel("Min:"),
-						minSizeLabel,
-						widget.NewLabel("Max:"),
-						maxSizeLabel,
-					),
-				),
-			),
-			b.parent,
-		)
+			default:
+				ShowError(fmt.Errorf("unknown build type: %s", buildItem.Type), nil, b.parent)
+			}
+		}()
 	}
 }
 
 func (b *BuildList) OnSelected(id int) {
 	b.Unselect(id)
+}
+
+func (b *BuildList) onABIButtonTapped(buildItem *Build) {
+	if len(buildItem.ABIList) == 0 {
+		ShowInformation("ABI Info", "No ABIs found", b.parent)
+		return
+	}
+
+	data := binding.BindStringList(&buildItem.ABIList)
+	list := widget.NewListWithData(
+		data,
+		func() fyne.CanvasObject {
+			return widget.NewLabel("<ABI>")
+		},
+		func(i binding.DataItem, o fyne.CanvasObject) {
+			o.(*widget.Label).Bind(i.(binding.String))
+		},
+	)
+
+	rect := canvas.NewRectangle(color.Transparent)
+	rect.SetMinSize(fyne.NewSize(310, 200))
+
+	minSizeLabel := widget.NewLabel(fmt.Sprintf("%s (%d)", buildItem.MinSize.HumanReadable(), buildItem.MinSize.Bytes()))
+	maxSizeLabel := widget.NewLabel(fmt.Sprintf("%s (%d)", buildItem.MaxSize.HumanReadable(), buildItem.MaxSize.Bytes()))
+
+	dialog.ShowCustom(
+		"ABI Info",
+		"Close",
+		container.NewVBox(
+			widget.NewCard(
+				"",
+				"ABIs:",
+				container.NewMax(
+					rect,
+					list,
+				),
+			),
+			widget.NewCard(
+				"",
+				"Sizes:",
+				container.NewGridWithColumns(
+					2,
+					widget.NewLabel("Min:"),
+					minSizeLabel,
+					widget.NewLabel("Max:"),
+					maxSizeLabel,
+				),
+			),
+		),
+		b.parent,
+	)
 }
 
 func (b *BuildList) LoadAPK(path string) {

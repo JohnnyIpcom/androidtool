@@ -20,6 +20,7 @@ import "fyne.io/fyne/v2"
 //go:generate fyne bundle -package assets -o bundled.go -append icon_apk.png
 //go:generate fyne bundle -package assets -o bundled.go -append icon_aab.png
 //go:generate fyne bundle -package assets -o bundled.go -append icon_abi.svg
+//go:generate fyne bundle -package assets -o bundled.go -append icon_manifest.svg
 
 // IconApp is the icon for the application
 var AppIcon = resourceIconappPng
@@ -59,6 +60,9 @@ var AABIcon = resourceIconaabPng
 
 // IconABI is the icon for the ABI file
 var ABIIcon = resourceIconabiSvg
+
+// IconManifest is the icon for the manifest button
+var ManifestIcon = resourceIconmanifestSvg
 
 // StatusIcons are the icons for the status of the device
 var StatusIcons map[string]*fyne.StaticResource = map[string]*fyne.StaticResource{

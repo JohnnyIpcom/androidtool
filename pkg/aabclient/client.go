@@ -159,3 +159,14 @@ func (c *Client) GetMinMaxSizes(ctx context.Context, apksPath string) (uint64, u
 
 	return min, max, nil
 }
+
+func (c *Client) GetManifest(ctx context.Context, aabPath string) ([]byte, error) {
+	c.log.Info("Getting manifest...")
+	args := []string{
+		"dump",
+		"manifest",
+		fmt.Sprintf("--bundle=%s", aabPath),
+	}
+
+	return c.tool.Run(ctx, args...)
+}

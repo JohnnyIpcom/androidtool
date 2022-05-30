@@ -114,3 +114,10 @@ func (a *AAPT) GetNativeCodeABIs(apkPath string) ([]string, error) {
 	a.log.Debugf("Native code ABIs: %v", archs)
 	return archs, nil
 }
+
+// GetManifest returns the manifest for the given APK.
+func (a *AAPT) GetManifest(apkPath string) ([]byte, error) {
+	a.log.Infof("Getting manifest for %s", apkPath)
+	cmd := exec.Command(a.path, "dump", "xmltree", apkPath, "AndroidManifest.xml")
+	return runCommand(cmd, nil)
+}

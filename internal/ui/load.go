@@ -20,9 +20,10 @@ import (
 )
 
 type AABInfo struct {
-	ABIList []string
-	MinSize uint64
-	MaxSize uint64
+	APKsPath string
+	ABIList  []string
+	MinSize  uint64
+	MaxSize  uint64
 }
 
 func LoadAAB(client *aabclient.Client, aapt *aapt.AAPT, path string, useCachedData bool, parent fyne.Window) (*AABInfo, error) {
@@ -113,8 +114,9 @@ func LoadAAB(client *aabclient.Client, aapt *aapt.AAPT, path string, useCachedDa
 
 	d.Hide()
 	return &AABInfo{
-		ABIList: abiSet.Keys(),
-		MinSize: min,
-		MaxSize: max,
+		APKsPath: apksFile,
+		ABIList:  abiSet.Keys(),
+		MinSize:  min,
+		MaxSize:  max,
 	}, nil
 }
