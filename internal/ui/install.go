@@ -14,7 +14,34 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
+	"github.com/johnnyipcom/androidtool/pkg/generic"
 )
+
+var ErrorsMap = map[string]string{
+	"INSTALL_FAILED_UPDATE_INCOMPATIBLE":             "The app is already installed. If you want to update, make sure that you use the same keystore as in the previous version",
+	"INSTALL_FAILED_DUPLICATE_PACKAGE":               "The version code of the installed application is higher than the version code of the application that you are installing",
+	"INSTALL_FAILED_INSUFFICIENT_STORAGE":            "Not enough free space on the connected device",
+	"INSTALL_FAILED_USER_RESTRICTED":                 "Run the installation again and confirm the installation on the device screen",
+	"INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES": "Try to install with keystore",
+	"INSTALL_FAILED_OLDER_SDK":                       "Device OS Version is not supported. Check Manifest File",
+	"INSTALL_PARSE_FAILED_NO_CERTIFICATES":           "Missing file build.keystore",
+}
+
+func humanizeError(out string) string {
+	errorsMap := generic.NewMapFromMap(ErrorsMap)
+
+	result := out
+	errorsMap.Each(func(key, value string) bool {
+		if strings.Contains(out, key) {
+			result = value
+			return false
+		}
+
+		return true
+	})
+
+	return result
+}
 
 // InstallAPK installs an APK file to a device.
 func InstallAPK(client *adbclient.Client, serial string, file fyne.URIReadCloser, parent fyne.Window) {
@@ -98,7 +125,7 @@ func InstallAAB(client *aabclient.Client, serial string, file fyne.URIReadCloser
 	label.SetText("Installing APKs...")
 	out, err = client.InstallAPKs(ctx, apksFile, serial)
 	if err != nil {
-		onError(string(out), err)
+		onError(humanizeError(string(out)), err)
 		return
 	}
 
