@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"fmt"
 	"image/color"
+	"os"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -9,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"github.com/c2h5oh/datasize"
 	"github.com/johnnyipcom/androidtool/internal/assets"
 	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/aapt"
@@ -48,6 +51,8 @@ type Build struct {
 	Type    BuildType
 	Path    string
 	ABIList []string
+	MinSize datasize.ByteSize
+	MaxSize datasize.ByteSize
 
 	abi *widget.Button
 }
@@ -104,14 +109,34 @@ func (b *BuildList) UpdateItem(id int, item fyne.CanvasObject) {
 		)
 
 		rect := canvas.NewRectangle(color.Transparent)
-		rect.SetMinSize(fyne.NewSize(150, 200))
+		rect.SetMinSize(fyne.NewSize(310, 200))
+
+		minSizeLabel := widget.NewLabel(fmt.Sprintf("%s (%d)", buildItem.MinSize.HumanReadable(), buildItem.MinSize.Bytes()))
+		maxSizeLabel := widget.NewLabel(fmt.Sprintf("%s (%d)", buildItem.MaxSize.HumanReadable(), buildItem.MaxSize.Bytes()))
 
 		dialog.ShowCustom(
 			"ABI Info",
 			"Close",
-			container.NewMax(
-				rect,
-				list,
+			container.NewVBox(
+				widget.NewCard(
+					"",
+					"ABIs:",
+					container.NewMax(
+						rect,
+						list,
+					),
+				),
+				widget.NewCard(
+					"",
+					"Sizes:",
+					container.NewGridWithColumns(
+						2,
+						widget.NewLabel("Min:"),
+						minSizeLabel,
+						widget.NewLabel("Max:"),
+						maxSizeLabel,
+					),
+				),
 			),
 			b.parent,
 		)
@@ -123,6 +148,12 @@ func (b *BuildList) OnSelected(id int) {
 }
 
 func (b *BuildList) LoadAPK(path string) {
+	stat, err := os.Stat(path)
+	if err != nil {
+		ShowError(err, nil, b.parent)
+		return
+	}
+
 	abis, err := b.aapt.GetNativeCodeABIs(path)
 	if err != nil {
 		ShowError(err, nil, b.parent)
@@ -134,6 +165,8 @@ func (b *BuildList) LoadAPK(path string) {
 			Type:    BuildTypeAPK,
 			Path:    path,
 			ABIList: abis,
+			MinSize: datasize.ByteSize(stat.Size()),
+			MaxSize: datasize.ByteSize(stat.Size()),
 		},
 	)
 
@@ -164,6 +197,8 @@ func (b *BuildList) LoadAAB(path string, useCachedData bool) {
 			Type:    BuildTypeAAB,
 			Path:    path,
 			ABIList: aabInfo.ABIList,
+			MinSize: datasize.ByteSize(aabInfo.MinSize),
+			MaxSize: datasize.ByteSize(aabInfo.MaxSize),
 		},
 	)
 

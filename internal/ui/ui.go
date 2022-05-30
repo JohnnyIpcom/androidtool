@@ -33,6 +33,9 @@ func SetupUI(app fyne.App, parent fyne.Window) fyne.CanvasObject {
 		log.Fatal(err)
 	}
 
+	javaSettings := prefs.StringWithFallback("bundletool_java_settings", aabclient.BundleToolJavaSettings)
+	aabClient.SetBundleToolJavaSettings(javaSettings)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	if err := adbClient.Start(ctx); err != nil {
 		log.Fatal(err)

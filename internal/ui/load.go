@@ -21,6 +21,8 @@ import (
 
 type AABInfo struct {
 	ABIList []string
+	MinSize uint64
+	MaxSize uint64
 }
 
 func LoadAAB(client *aabclient.Client, aapt *aapt.AAPT, path string, useCachedData bool, parent fyne.Window) (*AABInfo, error) {
@@ -59,22 +61,13 @@ func LoadAAB(client *aabclient.Client, aapt *aapt.AAPT, path string, useCachedDa
 
 	destDir := filepath.Join(dir, nameWithoutExt)
 	if !useCachedData || !IsDirExists(destDir) {
-		// unzip apks to dir
-		unzip, err := util.NewUnzipper(apksFile, destDir)
-		if err != nil {
-			onError("", err)
-			return nil, err
-		}
-
-		defer unzip.Close()
-
 		var once sync.Once
 		progressFunc := func(current, total uint64) {
 			once.Do(func() { bar.Max = float64(total) })
 			bar.SetValue(float64(current))
 		}
 
-		if err := unzip.Unzip(ctx, progressFunc); err != nil {
+		if err := util.Unzip(ctx, apksFile, destDir, progressFunc); err != nil {
 			onError("", err)
 			return nil, err
 		}
@@ -111,8 +104,17 @@ func LoadAAB(client *aabclient.Client, aapt *aapt.AAPT, path string, useCachedDa
 		return nil, err
 	}
 
+	bar.SetText("Calculating sizes...")
+	min, max, err := client.GetMinMaxSizes(ctx, apksFile)
+	if err != nil {
+		onError("", err)
+		return nil, err
+	}
+
 	d.Hide()
 	return &AABInfo{
 		ABIList: abiSet.Keys(),
+		MinSize: min,
+		MaxSize: max,
 	}, nil
 }

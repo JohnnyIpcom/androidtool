@@ -120,3 +120,20 @@ func (u *Unzipper) unzipFile(ctx context.Context, f *zip.File, dest string, prog
 
 	return err
 }
+
+func Unzip(ctx context.Context, source string, dest string, progressFunc progressFunc) error {
+	// unzip apks to dir
+	unzip, err := NewUnzipper(source, dest)
+	if err != nil {
+		return err
+	}
+
+	defer unzip.Close()
+
+	if err := unzip.Unzip(ctx, progressFunc); err != nil {
+		unzip.Close()
+		return err
+	}
+
+	return nil
+}

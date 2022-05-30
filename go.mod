@@ -5,6 +5,7 @@ go 1.18
 require (
 	fyne.io/fyne/v2 v2.1.4
 	github.com/antonfisher/nested-logrus-formatter v1.3.1
+	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/zach-klippenstein/goadb v0.0.0-20201208042340-620e0e950ed7
 	golang.org/x/image v0.0.0-20220413100746-70e8d0d3baa9

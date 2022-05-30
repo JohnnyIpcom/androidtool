@@ -27,12 +27,13 @@ type settings struct {
 	log       logger.Logger
 	prefs     fyne.Preferences
 
-	logPathButton          *widget.Button
-	logPathEntry           *widget.Entry
-	installPathEntry       *widget.Entry
-	videoPathEntry         *widget.Entry
-	adbPortEntry           *widget.Entry
-	bundletoolVersionEntry *widget.Entry
+	logPathButton               *widget.Button
+	logPathEntry                *widget.Entry
+	installPathEntry            *widget.Entry
+	videoPathEntry              *widget.Entry
+	adbPortEntry                *widget.Entry
+	bundletoolVersionEntry      *widget.Entry
+	bundletoolJavaSettingsEntry *widget.Entry
 }
 
 func uiSettings(app fyne.App, parent fyne.Window, adbClient *adbclient.Client, aabClient *aabclient.Client, log logger.Logger) *settings {
@@ -95,6 +96,11 @@ func (s *settings) onBundleToolVersionSubmitted(version string) {
 		s.bundletoolVersionEntry.SetText(s.aabClient.BundleToolVersion())
 		d.Hide()
 	}()
+}
+
+func (s *settings) onBundleToolJavaSettingsSubmitted(settings string) {
+	s.prefs.SetString("bundletool_java_settings", settings)
+	s.aabClient.SetBundleToolJavaSettings(settings)
 }
 
 func (s *settings) onLogPathSubmitted(path string) {
@@ -222,10 +228,25 @@ func (s *settings) buildBundleToolUI() fyne.CanvasObject {
 		},
 	}
 
+	s.bundletoolJavaSettingsEntry = &widget.Entry{
+		PlaceHolder: aabclient.BundleToolJavaSettings,
+		OnSubmitted: s.onBundleToolJavaSettingsSubmitted,
+	}
+
 	return container.NewVBox(
 		container.NewGridWithColumns(2,
 			NewBoldLabel("Bundletool version:"),
 			s.bundletoolVersionEntry,
+		),
+		widget.NewAccordion(
+			widget.NewAccordionItem(
+				"Advanced",
+				container.NewGridWithColumns(
+					2,
+					NewBoldLabel("Java settings:"),
+					s.bundletoolJavaSettingsEntry,
+				),
+			),
 		),
 	)
 }

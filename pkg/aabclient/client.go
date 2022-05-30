@@ -3,6 +3,7 @@ package aabclient
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/johnnyipcom/androidtool/pkg/logger"
 )
@@ -57,6 +58,14 @@ func (c *Client) SetBundleToolVersion(version string) error {
 // BundleToolVersion returns the version of used bundle tool.
 func (c *Client) BundleToolVersion() string {
 	return c.tool.Version()
+}
+
+func (c *Client) SetBundleToolJavaSettings(version string) {
+	c.tool.SetJavaSettings(version)
+}
+
+func (c *Client) BundleToolJavaSettings() string {
+	return c.tool.JavaSettings()
 }
 
 // KeystoreConfig returns the keystore configuration.
@@ -122,4 +131,31 @@ func (c *Client) InstallAPKs(ctx context.Context, apksPath string, serial string
 	}
 
 	return c.tool.Run(ctx, args...)
+}
+
+func (c *Client) GetMinMaxSizes(ctx context.Context, apksPath string) (uint64, uint64, error) {
+	c.log.Info("Getting APK sizes...")
+	args := []string{
+		"get-size",
+		"total",
+		fmt.Sprintf("--apks=%s", apksPath),
+	}
+
+	out, err := c.tool.Run(ctx, args...)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	lines := strings.Split(string(out), "\n")
+	if len(lines) < 2 {
+		return 0, 0, fmt.Errorf("invalid output: %s", out)
+	}
+
+	var min, max uint64
+	_, err = fmt.Sscanf(lines[1], "%d,%d", &min, &max)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return min, max, nil
 }

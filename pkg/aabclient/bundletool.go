@@ -17,15 +17,17 @@ import (
 )
 
 const (
-	BundleToolDefaultVersion = "1.10.0"
+	BundleToolDefaultVersion = "1.4.0"
 	BundleToolReleasePath    = "https://github.com/google/bundletool/releases/download/"
 	BundleToolReleaseFile    = "bundletool-all.jar"
+	BundleToolJavaSettings   = "-Dfile.encoding=UTF-8"
 )
 
 // BundleTool is a wrapper around the bundletool jar.
 type BundleTool struct {
 	client       *http.Client
 	version      string
+	javaSettings string
 	downloadURL  *url.URL
 	downloadPath string
 	log          logger.Logger
@@ -114,6 +116,20 @@ func (b *BundleTool) IsInstalled() bool {
 	}
 
 	return installed
+}
+
+// SetJavaSettings sets the java settings to use when running bundletool.
+func (b *BundleTool) SetJavaSettings(settings string) {
+	b.javaSettings = settings
+}
+
+// JavaSettings returns the java settings to use when running bundletool.
+func (b *BundleTool) JavaSettings() string {
+	if b.javaSettings == "" {
+		return BundleToolJavaSettings
+	}
+
+	return b.javaSettings
 }
 
 type progressFunc func(sentBytes int64)
@@ -233,6 +249,9 @@ func (b *BundleTool) Run(ctx context.Context, args ...string) ([]byte, error) {
 	b.log.Infof("Running bundletool v%s with args %v...", b.version, args)
 
 	var command []string
+	if b.javaSettings != "" {
+		command = append(command, b.javaSettings)
+	}
 	command = append(command, "-jar", b.downloadPath)
 	command = append(command, args...)
 
