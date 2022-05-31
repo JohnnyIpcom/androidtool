@@ -58,7 +58,7 @@ func InstallAPK(client *adbclient.Client, serial string, file fyne.URIReadCloser
 
 	onError := func(err error) {
 		bar.SetText("Failed")
-		ShowError(err, d.Hide, parent)
+		GetApp().ShowError(err, d.Hide, parent)
 	}
 
 	device, err := client.GetDevice(serial)
@@ -75,7 +75,7 @@ func InstallAPK(client *adbclient.Client, serial string, file fyne.URIReadCloser
 
 	defer func() {
 		if err := client.RemoveFile(device, apkPath); err != nil {
-			ShowError(err, nil, parent)
+			GetApp().ShowError(err, nil, parent)
 		}
 	}()
 
@@ -88,7 +88,7 @@ func InstallAPK(client *adbclient.Client, serial string, file fyne.URIReadCloser
 	}
 
 	d.Hide()
-	ShowInformation("Installation result", result, parent)
+	GetApp().ShowInformation("Installation result", result, parent)
 }
 
 // InstallAAB installs an AAB file to a device and optionally signs it with a keystore.
@@ -108,7 +108,7 @@ func InstallAAB(client *aabclient.Client, serial string, file fyne.URIReadCloser
 
 	onError := func(out string, err error) {
 		label.SetText("Failed")
-		ShowError(fmt.Errorf("%s\n%s", err.Error(), out), d.Hide, parent)
+		GetApp().ShowError(fmt.Errorf("%s\n%s", err.Error(), out), d.Hide, parent)
 	}
 
 	dir, fullName := filepath.Split(file.URI().Path())
@@ -130,5 +130,5 @@ func InstallAAB(client *aabclient.Client, serial string, file fyne.URIReadCloser
 	}
 
 	d.Hide()
-	ShowInformation("Installation result", "Success!", parent)
+	GetApp().ShowInformation("Installation result", "Success!", parent)
 }

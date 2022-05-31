@@ -45,7 +45,7 @@ func Send(client *adbclient.Client, device *adbclient.Device, parent fyne.Window
 			adbclient.InputCommandText,
 			text,
 		); err != nil {
-			ShowError(err, d.Hide, parent)
+			GetApp().ShowError(err, d.Hide, parent)
 		}
 	}
 
@@ -57,7 +57,7 @@ func Send(client *adbclient.Client, device *adbclient.Device, parent fyne.Window
 
 		sendEntry.SetText("")
 		if err := client.SendLink(device, link); err != nil {
-			ShowError(err, d.Hide, parent)
+			GetApp().ShowError(err, d.Hide, parent)
 		}
 	}
 

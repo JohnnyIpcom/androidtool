@@ -16,6 +16,8 @@ const (
 type Logger interface {
 	WithField(key string, value interface{}) Logger
 
+	WithStackParams(enable bool, skip int) Logger
+
 	Log(severity Severity, args ...interface{})
 	Logf(severity Severity, format string, args ...interface{})
 

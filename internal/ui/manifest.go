@@ -51,19 +51,19 @@ func APKManifest(aapt *aapt.AAPT, path string, parent fyne.Window) {
 			// Save manifest to file.
 			file, err := os.OpenFile(manifestPathEntry.Text, os.O_WRONLY|os.O_CREATE, 0644)
 			if err != nil {
-				ShowError(err, nil, parent)
+				GetApp().ShowError(err, nil, parent)
 				return
 			}
 
 			manifest, err := aapt.GetManifest(path)
 			if err != nil {
-				ShowError(err, nil, parent)
+				GetApp().ShowError(err, nil, parent)
 				return
 			}
 
 			defer file.Close()
 			if _, err := file.Write(manifest); err != nil {
-				ShowError(err, nil, parent)
+				GetApp().ShowError(err, nil, parent)
 				return
 			}
 		},
@@ -111,19 +111,19 @@ func AABManifest(client *aabclient.Client, aabFile string, parent fyne.Window) {
 			// Save manifest to file.
 			file, err := os.OpenFile(manifestPathEntry.Text, os.O_WRONLY|os.O_CREATE, 0644)
 			if err != nil {
-				ShowError(err, nil, parent)
+				GetApp().ShowError(err, nil, parent)
 				return
 			}
 
 			manifest, err := client.GetManifest(context.Background(), aabFile)
 			if err != nil {
-				ShowError(err, nil, parent)
+				GetApp().ShowError(err, nil, parent)
 				return
 			}
 
 			defer file.Close()
 			if _, err := file.Write(manifest); err != nil {
-				ShowError(err, nil, parent)
+				GetApp().ShowError(err, nil, parent)
 				return
 			}
 		},

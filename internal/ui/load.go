@@ -36,7 +36,7 @@ func LoadAAB(client *aabclient.Client, aapt *aapt.AAPT, path string, useCachedDa
 
 	onError := func(out string, err error) {
 		bar.SetText("Failed")
-		ShowError(fmt.Errorf("%s\n%s", err.Error(), out), d.Hide, parent)
+		GetApp().ShowError(fmt.Errorf("%s\n%s", err.Error(), out), d.Hide, parent)
 	}
 
 	dir, fullName := filepath.Split(path)

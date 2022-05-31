@@ -30,3 +30,6 @@
 
 # Logs
 *.log
+
+# Database files
+*.db

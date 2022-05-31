@@ -22,6 +22,7 @@ import "fyne.io/fyne/v2"
 //go:generate fyne bundle -package assets -o bundled.go -append icon_abi.svg
 //go:generate fyne bundle -package assets -o bundled.go -append icon_manifest.svg
 //go:generate fyne bundle -package assets -o bundled.go -append icon_sizes.svg
+//go:generate fyne bundle -package assets -o bundled.go -append icon_delete.png
 
 // IconApp is the icon for the application
 var AppIcon = resourceIconappPng
@@ -67,6 +68,9 @@ var ManifestIcon = resourceIconmanifestSvg
 
 // IconSizes is the icon for the sizes button
 var SizesIcon = resourceIconsizesSvg
+
+// DeleteIcon is the icon for the delete button
+var DeleteIcon = resourceIcondeletePng
 
 // StatusIcons are the icons for the status of the device
 var StatusIcons map[string]*fyne.StaticResource = map[string]*fyne.StaticResource{

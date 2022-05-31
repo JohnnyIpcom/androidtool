@@ -44,7 +44,7 @@ func showSizes(min uint64, max uint64, parent fyne.Window) {
 func APKSizes(apkPath string, parent fyne.Window) {
 	stat, err := os.Stat(apkPath)
 	if err != nil {
-		ShowError(err, nil, parent)
+		GetApp().ShowError(err, nil, parent)
 		return
 	}
 
@@ -70,7 +70,7 @@ func AABSizes(client *aabclient.Client, apksPath string, parent fyne.Window) {
 
 	onError := func(out string, err error) {
 		label.SetText("Failed")
-		ShowError(fmt.Errorf("%s\n%s", err.Error(), out), d.Hide, parent)
+		GetApp().ShowError(fmt.Errorf("%s\n%s", err.Error(), out), d.Hide, parent)
 	}
 
 	min, max, err := client.GetMinMaxSizes(ctx, apksPath)

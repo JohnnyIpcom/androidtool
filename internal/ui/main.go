@@ -8,10 +8,11 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/storage"
+	fynestorage "fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/johnnyipcom/androidtool/internal/assets"
+	"github.com/johnnyipcom/androidtool/internal/storage"
 	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
 )
@@ -21,22 +22,30 @@ type main struct {
 	parent    fyne.Window
 	adbClient *adbclient.Client
 	aabClient *aabclient.Client
+	storage   *storage.Storage
 
 	deviceList             *DeviceList
 	useCustomKeystoreCheck *widget.Check
 }
 
-func uiMain(app fyne.App, parent fyne.Window, adbClient *adbclient.Client, aabClient *aabclient.Client) *main {
+func uiMain(app fyne.App, parent fyne.Window, adbClient *adbclient.Client, aabClient *aabclient.Client, storage *storage.Storage) *main {
 	return &main{
 		app:       app,
 		parent:    parent,
 		adbClient: adbClient,
 		aabClient: aabClient,
+		storage:   storage,
 	}
 }
 
 func (m *main) buildUI() *fyne.Container {
-	m.deviceList = NewDeviceList(m.adbClient, m.parent)
+	deviceList, err := NewDeviceList(m.adbClient, m.storage, m.parent)
+	if err != nil {
+		GetApp().ShowError(err, nil, m.parent)
+		return nil
+	}
+
+	m.deviceList = deviceList
 
 	rect := canvas.NewRectangle(color.Transparent)
 	rect.SetMinSize(fyne.NewSize(0, 75))
@@ -88,7 +97,7 @@ func (m *main) onUseCustomKeystoreChecked(checked bool) {
 func (m *main) onInstallAPK() {
 	fopenDialog := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
 		if err != nil {
-			ShowError(err, nil, m.parent)
+			GetApp().ShowError(err, nil, m.parent)
 			return
 		}
 
@@ -98,7 +107,7 @@ func (m *main) onInstallAPK() {
 
 		device, err := m.deviceList.SelectedDevice()
 		if err != nil {
-			ShowError(err, nil, m.parent)
+			GetApp().ShowError(err, nil, m.parent)
 			return
 		}
 
@@ -109,14 +118,14 @@ func (m *main) onInstallAPK() {
 	}, m.parent)
 
 	fopenDialog.Resize(DialogSize(m.parent))
-	fopenDialog.SetFilter(storage.NewExtensionFileFilter([]string{".apk"}))
+	fopenDialog.SetFilter(fynestorage.NewExtensionFileFilter([]string{".apk"}))
 	fopenDialog.Show()
 }
 
 func (m *main) onInstallAAB() {
 	fopenDialog := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
 		if err != nil {
-			ShowError(err, nil, m.parent)
+			GetApp().ShowError(err, nil, m.parent)
 			return
 		}
 
@@ -126,7 +135,7 @@ func (m *main) onInstallAAB() {
 
 		device, err := m.deviceList.SelectedDevice()
 		if err != nil {
-			ShowError(err, nil, m.parent)
+			GetApp().ShowError(err, nil, m.parent)
 			return
 		}
 
@@ -137,7 +146,7 @@ func (m *main) onInstallAAB() {
 	}, m.parent)
 
 	fopenDialog.Resize(DialogSize(m.parent))
-	fopenDialog.SetFilter(storage.NewExtensionFileFilter([]string{".aab"}))
+	fopenDialog.SetFilter(fynestorage.NewExtensionFileFilter([]string{".aab"}))
 	fopenDialog.Show()
 }
 
@@ -156,7 +165,7 @@ func (m *main) getCustomKeystore() *aabclient.KeystoreConfig {
 		keystorePathButton := widget.NewButtonWithIcon("Select", theme.FileIcon(), func() {
 			fopenDialog := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
 				if err != nil {
-					ShowError(err, nil, m.parent)
+					GetApp().ShowError(err, nil, m.parent)
 					return
 				}
 
@@ -169,7 +178,7 @@ func (m *main) getCustomKeystore() *aabclient.KeystoreConfig {
 			}, m.parent)
 
 			fopenDialog.Resize(DialogSize(m.parent))
-			fopenDialog.SetFilter(storage.NewExtensionFileFilter([]string{".keystore"}))
+			fopenDialog.SetFilter(fynestorage.NewExtensionFileFilter([]string{".keystore"}))
 			fopenDialog.Show()
 		})
 

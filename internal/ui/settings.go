@@ -14,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/johnnyipcom/androidtool/internal/assets"
+	"github.com/johnnyipcom/androidtool/internal/storage"
 	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/adbclient"
 	"github.com/johnnyipcom/androidtool/pkg/logger"
@@ -24,11 +25,14 @@ type settings struct {
 	parent    fyne.Window
 	adbClient *adbclient.Client
 	aabClient *aabclient.Client
+	storage   *storage.Storage
 	log       logger.Logger
 	prefs     fyne.Preferences
 
 	logPathButton               *widget.Button
 	logPathEntry                *widget.Entry
+	storagePathButton           *widget.Button
+	storagePathEntry            *widget.Entry
 	installPathEntry            *widget.Entry
 	videoPathEntry              *widget.Entry
 	adbPortEntry                *widget.Entry
@@ -36,12 +40,13 @@ type settings struct {
 	bundletoolJavaSettingsEntry *widget.Entry
 }
 
-func uiSettings(app fyne.App, parent fyne.Window, adbClient *adbclient.Client, aabClient *aabclient.Client, log logger.Logger) *settings {
+func uiSettings(app fyne.App, parent fyne.Window, adbClient *adbclient.Client, aabClient *aabclient.Client, storage *storage.Storage, log logger.Logger) *settings {
 	return &settings{
 		app:       app,
 		parent:    parent,
 		adbClient: adbClient,
 		aabClient: aabClient,
+		storage:   storage,
 		log:       log,
 		prefs:     app.Preferences(),
 	}
@@ -68,7 +73,7 @@ func (s *settings) onADBPortSubmitted(port string) {
 	}
 
 	s.prefs.SetInt("adb_port", portInt)
-	ShowInformation("ADB port changed", "You must restart the application for the new port to take effect.", s.parent)
+	GetApp().ShowInformation("ADB port changed", "You must restart the application for the new port to take effect.", s.parent)
 }
 
 func (s *settings) onBundleToolVersionSubmitted(version string) {
@@ -127,6 +132,30 @@ func (s *settings) onLogPathButtonClicked() {
 	fsaveDialog.Show()
 }
 
+func (s *settings) onStoragePathSubmitted(path string) {
+	s.prefs.SetString("storage_path", path)
+	GetApp().ShowInformation("Storage path changed", "You must restart the application for the new path to take effect.", s.parent)
+}
+
+func (s *settings) onStoragePathButtonClicked() {
+	fsaveDialog := dialog.NewFileSave(func(file fyne.URIWriteCloser, err error) {
+		if err != nil {
+			return
+		}
+
+		if file == nil {
+			return
+		}
+
+		path := file.URI().Path()
+		s.storagePathEntry.SetText(path)
+		s.onStoragePathSubmitted(path)
+	}, s.parent)
+
+	fsaveDialog.Resize(DialogSize(s.parent))
+	fsaveDialog.Show()
+}
+
 func (s *settings) applyPreferences() {
 	path := s.prefs.StringWithFallback("install_path", adbclient.DefaultInstallPath)
 	s.installPathEntry.SetText(path)
@@ -150,11 +179,24 @@ func (s *settings) buildAndroidToolUI() fyne.CanvasObject {
 		s.onLogPathButtonClicked,
 	)
 
+	s.storagePathEntry = &widget.Entry{
+		PlaceHolder: storage.DefaultStoragePath,
+		OnSubmitted: s.onStoragePathSubmitted,
+	}
+
+	s.storagePathButton = widget.NewButtonWithIcon(
+		"Select",
+		theme.FileIcon(),
+		s.onStoragePathButtonClicked,
+	)
+
 	return container.NewVBox(
 		container.NewGridWithColumns(
 			2,
 			NewBoldLabel("Log path:"),
 			container.New(&alignToRightLayout{}, s.logPathEntry, s.logPathButton),
+			NewBoldLabel("Storage path:"),
+			container.New(&alignToRightLayout{}, s.storagePathEntry, s.storagePathButton),
 		),
 	)
 }

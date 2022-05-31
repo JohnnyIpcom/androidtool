@@ -1,10 +1,7 @@
 package adbclient
 
 import (
-	"bytes"
 	"fmt"
-	"image"
-	"image/png"
 	"strings"
 )
 
@@ -41,25 +38,21 @@ func WithScreenshotAsPng() ScreenshotOption {
 }
 
 // Screenshot takes a screenshot of the device.
-func (c *Client) Screenshot(device *Device, opts ...ScreenshotOption) (image.Image, error) {
+func (c *Client) Screenshot(device *Device, path string, opts ...ScreenshotOption) error {
 	c.log.Info("Taking screenshot...")
 
 	options := screenshotOptions{}
 	for _, o := range opts {
 		if err := o.apply(&options); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	resp, err := c.runCommand(device, fmt.Sprintf("screencap %s", strings.Join(options.Options(), " ")))
+	resp, err := c.runCommand(device, fmt.Sprintf("screencap %s %s", strings.Join(options.Options(), " "), path))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	img, err := png.Decode(bytes.NewReader(resp))
-	if err != nil {
-		return nil, err
-	}
-
-	return img, nil
+	c.log.Debugf("Got response: %s", resp)
+	return nil
 }

@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	DefaultInstallPath = "/data/local/tmp/app.apk"
-	DefaultVideoPath   = "/sdcard/video.mp4"
-	DefaultPort        = adb.AdbPort
+	DefaultInstallPath    = "/data/local/tmp/app.apk"
+	DefaultVideoPath      = "/sdcard/video.mp4"
+	DefaultScreenshotPath = "/sdcard/screenshot.png"
+	DefaultPort           = adb.AdbPort
 )
 
 // Client is a ui wrapper around the adb client.
@@ -27,9 +28,10 @@ type Client struct {
 	events chan DeviceStateChangedEvent
 	port   int
 
-	propertyMu  sync.RWMutex
-	installPath string
-	videoPath   string
+	propertyMu     sync.RWMutex
+	installPath    string
+	videoPath      string
+	screenshotPath string
 }
 
 // New creates a new client.
@@ -182,6 +184,24 @@ func (c *Client) GetVideoPath() string {
 	return c.videoPath
 }
 
+func (c *Client) SetScreenshotPath(path string) {
+	c.propertyMu.Lock()
+	defer c.propertyMu.Unlock()
+
+	c.screenshotPath = path
+}
+
+func (c *Client) GetScreenshotPath() string {
+	c.propertyMu.RLock()
+	defer c.propertyMu.RUnlock()
+
+	if c.screenshotPath == "" {
+		return DefaultScreenshotPath
+	}
+
+	return c.screenshotPath
+}
+
 // Install installs a package to the device.
 func (c *Client) Install(device *Device, apkPath string) (string, error) {
 	c.log.Infof("Installing %s...", apkPath)
@@ -214,7 +234,7 @@ func getProp(device *adb.Device, prop string) (string, error) {
 		return "", err
 	}
 
-	_, value := parseKeyVal(strings.Trim(result, " \n"), ":")
+	_, value := parseKeyVal(strings.Trim(result, " \r\n"), ":")
 	return value, nil
 }
 
@@ -224,17 +244,17 @@ func wm(device *adb.Device, prop string) (string, error) {
 		return "", err
 	}
 
-	_, value := parseKeyVal(strings.Trim(result, " \n"), ":")
+	_, value := parseKeyVal(strings.Trim(result, " \r\n"), ":")
 	return value, nil
 }
 
-func diskUsage(device *adb.Device, path string) (int, error) {
-	result, err := device.RunCommand("du", "-b", path)
+func diskUsageInKilobytes(device *adb.Device, path string) (int, error) {
+	result, err := device.RunCommand("du", "-k", path)
 	if err != nil {
 		return 0, err
 	}
 
-	key, _ := parseKeyVal(strings.Trim(result, " \n"), "\t")
+	key, _ := parseKeyVal(strings.Trim(result, " \r\n"), "\t")
 	return strconv.Atoi(key)
 }
 

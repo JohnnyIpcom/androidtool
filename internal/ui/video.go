@@ -91,7 +91,7 @@ func Video(client *adbclient.Client, device *adbclient.Device, parent fyne.Windo
 
 	onError := func(err error) {
 		progressBar.SetText("Failed")
-		ShowError(err, d.Hide, parent)
+		GetApp().ShowError(err, d.Hide, parent)
 	}
 
 	makeVideoButton.OnTapped = func() {

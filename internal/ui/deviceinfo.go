@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"image/color"
 	"strconv"
 
@@ -20,8 +19,8 @@ func DeviceInfo(client *adbclient.Client, device *adbclient.Device, parent fyne.
 		{"Model", device.Model},
 		{"Device Info", device.DeviceInfo},
 		{"USB", device.USB},
-		{"Display", fmt.Sprintf("%dx%d (%d DPI)", device.Display.Width, device.Display.Height, device.Display.Density)},
-		{"Release", strconv.FormatInt(int64(device.Release), 10)},
+		{"Display", device.Display.String()},
+		{"Release", device.Release},
 		{"SDK", strconv.FormatInt(int64(device.SDK), 10)},
 		{"ABI", device.ABI},
 		{"EGL Version", device.EGLVersion},

@@ -98,7 +98,7 @@ func (b *BuildList) UpdateItem(id int, item fyne.CanvasObject) {
 				AABABIInfo(b.aabClient, b.aapt, buildItem.UnpackedPath, b.parent)
 
 			default:
-				ShowError(fmt.Errorf("unknown build type: %s", buildItem.Type), nil, b.parent)
+				GetApp().ShowError(fmt.Errorf("unknown build type: %s", buildItem.Type), nil, b.parent)
 			}
 		}()
 	}
@@ -114,7 +114,7 @@ func (b *BuildList) UpdateItem(id int, item fyne.CanvasObject) {
 				AABSizes(b.aabClient, buildItem.APKsPath, b.parent)
 
 			default:
-				ShowError(fmt.Errorf("unknown build type: %s", buildItem.Type), nil, b.parent)
+				GetApp().ShowError(fmt.Errorf("unknown build type: %s", buildItem.Type), nil, b.parent)
 			}
 		}()
 	}
@@ -130,7 +130,7 @@ func (b *BuildList) UpdateItem(id int, item fyne.CanvasObject) {
 				AABManifest(b.aabClient, buildItem.Path, b.parent)
 
 			default:
-				ShowError(fmt.Errorf("unknown build type: %s", buildItem.Type), nil, b.parent)
+				GetApp().ShowError(fmt.Errorf("unknown build type: %s", buildItem.Type), nil, b.parent)
 			}
 		}()
 	}
@@ -166,7 +166,7 @@ func (b *BuildList) LoadAAB(path string, useCachedData bool) {
 	})
 
 	if err := g.Wait(); err != nil {
-		ShowError(err, nil, b.parent)
+		GetApp().ShowError(err, nil, b.parent)
 		return
 	}
 

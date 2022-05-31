@@ -77,7 +77,7 @@ func (b *builds) buildUI() *fyne.Container {
 func (b *builds) onLoadAPK() {
 	fopenDialog := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
 		if err != nil {
-			ShowError(err, nil, b.parent)
+			GetApp().ShowError(err, nil, b.parent)
 			return
 		}
 
@@ -96,7 +96,7 @@ func (b *builds) onLoadAPK() {
 func (b *builds) onLoadAAB() {
 	fopenDialog := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
 		if err != nil {
-			ShowError(err, nil, b.parent)
+			GetApp().ShowError(err, nil, b.parent)
 			return
 		}
 

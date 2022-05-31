@@ -53,7 +53,7 @@ func showABIInfo(abis []string, parent fyne.Window) {
 func APKABIInfo(aapt *aapt.AAPT, apkPath string, parent fyne.Window) {
 	abis, err := aapt.GetNativeCodeABIs(apkPath)
 	if err != nil {
-		ShowError(err, nil, parent)
+		GetApp().ShowError(err, nil, parent)
 		return
 	}
 
@@ -76,7 +76,7 @@ func AABABIInfo(client *aabclient.Client, aapt *aapt.AAPT, unpackedPath string, 
 
 	onError := func(out string, err error) {
 		label.SetText("Failed")
-		ShowError(fmt.Errorf("%s\n%s", err.Error(), out), d.Hide, parent)
+		GetApp().ShowError(fmt.Errorf("%s\n%s", err.Error(), out), d.Hide, parent)
 	}
 
 	abiSet := generic.NewSet[string]()

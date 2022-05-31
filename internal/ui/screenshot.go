@@ -1,11 +1,10 @@
 package ui
 
 import (
-	"bytes"
+	"context"
 	"fmt"
 	"image"
 	"image/color"
-	"image/png"
 	"io"
 	"os"
 
@@ -175,19 +174,10 @@ func Screenshot(client *adbclient.Client, device *adbclient.Device, parent fyne.
 		fsaveDialog.Show()
 	})
 
-	makeScreenshotButton := widget.NewButtonWithIcon("Screenshot", assets.ScreenshotIcon, func() {
-		screenshot, err := client.Screenshot(device, adbclient.WithScreenshotAsPng())
-		if err != nil {
-			ShowError(err, nil, parent)
-			return
-		}
+	makeScreenshotButton := widget.NewButtonWithIcon("Screenshot", assets.ScreenshotIcon, nil)
 
-		screenshotImage.LoadFromImage(screenshot)
-	})
-
-	d := dialog.NewCustomConfirm(
+	d := dialog.NewCustom(
 		"Screenshot",
-		"Save",
 		"Close",
 		container.NewBorder(
 			container.New(&alignToRightLayout{}, screenshotPathEntry, screenshotPathButton),
@@ -196,29 +186,46 @@ func Screenshot(client *adbclient.Client, device *adbclient.Device, parent fyne.
 			nil,
 			container.NewMax(screenshotImage),
 		),
-		func(b bool) {
-			if !b || screenshotPathEntry.Text == "" {
-				return
-			}
-
-			// Save image to file.
-			var imgBuffer bytes.Buffer
-			if err := png.Encode(&imgBuffer, screenshotImage.src); err != nil {
-				ShowError(err, nil, parent)
-				return
-			}
-
-			file, err := os.OpenFile(screenshotPathEntry.Text, os.O_WRONLY|os.O_CREATE, 0644)
-			if err != nil {
-				ShowError(err, nil, parent)
-				return
-			}
-
-			defer file.Close()
-			file.Write(imgBuffer.Bytes())
-		},
 		parent,
 	)
+
+	makeScreenshotButton.OnTapped = func() {
+		screenshotPath := client.GetScreenshotPath()
+		if err := client.Screenshot(device, screenshotPath, adbclient.WithScreenshotAsPng()); err != nil {
+			GetApp().ShowError(err, d.Hide, parent)
+			return
+		}
+
+		defer func() {
+			if err := client.RemoveFile(device, screenshotPath); err != nil {
+				GetApp().ShowError(err, d.Hide, parent)
+			}
+		}()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		if err := client.Download(ctx, device, screenshotPath, screenshotPathEntry.Text); err != nil {
+			GetApp().ShowError(err, d.Hide, parent)
+			return
+		}
+
+		f, err := os.Open(screenshotPathEntry.Text)
+		if err != nil {
+			GetApp().ShowError(err, d.Hide, parent)
+			return
+		}
+
+		defer f.Close()
+
+		image, _, err := image.Decode(f)
+		if err != nil {
+			GetApp().ShowError(err, d.Hide, parent)
+			return
+		}
+
+		screenshotImage.LoadFromImage(image)
+	}
 
 	d.Resize(DialogSize(parent))
 	d.Show()

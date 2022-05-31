@@ -44,12 +44,12 @@ func (c *Client) Download(ctx context.Context, device *Device, src, dst string, 
 
 	d := c.adb.Device(adb.DeviceWithSerial(device.Serial))
 
-	size, err := diskUsage(d, src)
+	size, err := diskUsageInKilobytes(d, src)
 	if err != nil {
 		return err
 	}
 
-	c.log.Debugf("Downloading %d bytes", size)
+	c.log.Debugf("Downloading %d kilobytes", size)
 
 	r, err := d.OpenRead(src)
 	if err != nil {
@@ -80,7 +80,7 @@ func (c *Client) Download(ctx context.Context, device *Device, src, dst string, 
 
 			total += n
 			if options.progressFunc != nil {
-				options.progressFunc(int64(total), int64(size))
+				options.progressFunc(int64(total), int64(size*1024))
 			}
 
 			return n, err

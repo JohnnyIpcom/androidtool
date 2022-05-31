@@ -35,24 +35,28 @@ func (state DeviceState) String() string {
 
 // DisplayParams is the display parameters.
 type DisplayParams struct {
-	Width   int
-	Height  int
-	Density int
+	Width   int `json:"width"`
+	Height  int `json:"height"`
+	Density int `json:"density"`
+}
+
+func (p DisplayParams) String() string {
+	return fmt.Sprintf("%dx%d (%d dpi)", p.Width, p.Height, p.Density)
 }
 
 // Device is a wrapper around an adb.Device.
 type Device struct {
-	Serial     string
-	Product    string
-	Model      string
-	DeviceInfo string
-	USB        string
-	Display    DisplayParams
-	Release    int
-	SDK        int
-	ABI        string
-	EGLVersion string
-	State      DeviceState
+	Serial     string        `json:"serial"`
+	Product    string        `json:"product"`
+	Model      string        `json:"model"`
+	DeviceInfo string        `json:"device_info"`
+	USB        string        `json:"usb"`
+	Display    DisplayParams `json:"display"`
+	Release    string        `json:"release"`
+	SDK        int           `json:"sdk"`
+	ABI        string        `json:"abi"`
+	EGLVersion string        `json:"egl_version"`
+	State      DeviceState   `json:"-"`
 }
 
 // NewDevice creates a new Device from an adb.Device.
@@ -68,7 +72,6 @@ func NewDevice(client *Client, device *adb.Device) (*Device, error) {
 	}
 
 	sRelease, _ := getProp(device, "ro.build.version.release")
-	iRelease, _ := strconv.ParseInt(sRelease, 10, 64)
 
 	sSdk, _ := getProp(device, "ro.build.version.sdk")
 	iSdk, _ := strconv.ParseInt(sSdk, 10, 64)
@@ -93,7 +96,7 @@ func NewDevice(client *Client, device *adb.Device) (*Device, error) {
 		DeviceInfo: deviceInfo.DeviceInfo,
 		USB:        deviceInfo.Usb,
 		State:      DeviceState(deviceState),
-		Release:    int(iRelease),
+		Release:    sRelease,
 		SDK:        int(iSdk),
 		ABI:        sABI,
 		EGLVersion: sEGLVersion,

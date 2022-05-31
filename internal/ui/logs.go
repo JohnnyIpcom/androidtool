@@ -71,7 +71,7 @@ func Logs(client *adbclient.Client, device *adbclient.Device, parent fyne.Window
 
 	logcat, err := client.Logcat(device)
 	if err != nil {
-		ShowError(err, nil, parent)
+		GetApp().ShowError(err, nil, parent)
 		return
 	}
 
@@ -81,18 +81,18 @@ func Logs(client *adbclient.Client, device *adbclient.Device, parent fyne.Window
 
 	fileSaver, err := util.NewFileSaver(logcat)
 	if err != nil {
-		ShowError(err, nil, parent)
+		GetApp().ShowError(err, nil, parent)
 		return
 	}
 
 	logsStartButton.OnTapped = func() {
 		if err := client.ClearLogcat(device); err != nil {
-			ShowError(err, nil, parent)
+			GetApp().ShowError(err, nil, parent)
 			return
 		}
 
 		if err := fileSaver.Start(logsPathEntry.Text); err != nil {
-			ShowError(err, nil, parent)
+			GetApp().ShowError(err, nil, parent)
 			return
 		}
 
