@@ -155,6 +155,7 @@ func (c *Client) SetInstallPath(path string) {
 	c.installPath = path
 }
 
+// GetInstallPath returns the path to install the apk.
 func (c *Client) GetInstallPath() string {
 	c.propertyMu.RLock()
 	defer c.propertyMu.RUnlock()
@@ -166,6 +167,7 @@ func (c *Client) GetInstallPath() string {
 	return c.installPath
 }
 
+// SetVideoPath sets the path to save the video on the device.
 func (c *Client) SetVideoPath(path string) {
 	c.propertyMu.Lock()
 	defer c.propertyMu.Unlock()
@@ -173,6 +175,7 @@ func (c *Client) SetVideoPath(path string) {
 	c.videoPath = path
 }
 
+// GetVideoPath returns the path to save the video on the device.
 func (c *Client) GetVideoPath() string {
 	c.propertyMu.RLock()
 	defer c.propertyMu.RUnlock()
@@ -184,6 +187,7 @@ func (c *Client) GetVideoPath() string {
 	return c.videoPath
 }
 
+// SetScreenshotPath sets the path to save the screenshot on the device.
 func (c *Client) SetScreenshotPath(path string) {
 	c.propertyMu.Lock()
 	defer c.propertyMu.Unlock()
@@ -191,6 +195,7 @@ func (c *Client) SetScreenshotPath(path string) {
 	c.screenshotPath = path
 }
 
+// GetScreenshotPath returns the path to save the screenshot on the device.
 func (c *Client) GetScreenshotPath() string {
 	c.propertyMu.RLock()
 	defer c.propertyMu.RUnlock()

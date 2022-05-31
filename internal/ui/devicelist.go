@@ -219,7 +219,12 @@ func (d *DeviceList) deviceWatcher() {
 			continue
 		}
 
-		d.storage.SaveDevice(oldItem.Device)
+		if oldItem.Device.State == adbclient.StateInvalid {
+			// if device is invalid, refresh it
+			oldItem.Device, _ = d.client.GetDevice(event.Serial)
+			d.storage.SaveDevice(oldItem.Device)
+		}
+
 		oldItem.SetState(event.State)
 		d.Refresh()
 	}

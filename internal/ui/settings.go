@@ -34,6 +34,7 @@ type settings struct {
 	storagePathButton           *widget.Button
 	storagePathEntry            *widget.Entry
 	installPathEntry            *widget.Entry
+	screenshotPathEntry         *widget.Entry
 	videoPathEntry              *widget.Entry
 	adbPortEntry                *widget.Entry
 	bundletoolVersionEntry      *widget.Entry
@@ -55,6 +56,11 @@ func uiSettings(app fyne.App, parent fyne.Window, adbClient *adbclient.Client, a
 func (s *settings) onInstallPathSubmitted(path string) {
 	s.prefs.SetString("install_path", path)
 	s.adbClient.SetInstallPath(path)
+}
+
+func (s *settings) onScreenshotPathSubmitted(path string) {
+	s.prefs.SetString("screenshot_path", path)
+	s.adbClient.SetScreenshotPath(path)
 }
 
 func (s *settings) onVideoPathSubmitted(path string) {
@@ -157,14 +163,20 @@ func (s *settings) onStoragePathButtonClicked() {
 }
 
 func (s *settings) applyPreferences() {
-	path := s.prefs.StringWithFallback("install_path", adbclient.DefaultInstallPath)
-	s.installPathEntry.SetText(path)
+	installPath := s.prefs.StringWithFallback("install_path", adbclient.DefaultInstallPath)
+	s.installPathEntry.SetText(installPath)
 
-	port := s.prefs.IntWithFallback("adb_port", adbclient.DefaultPort)
-	s.adbPortEntry.SetText(strconv.FormatInt(int64(port), 10))
+	screenshotPath := s.prefs.StringWithFallback("screenshot_path", adbclient.DefaultScreenshotPath)
+	s.screenshotPathEntry.SetText(screenshotPath)
 
-	version := s.prefs.StringWithFallback("bundletool_version", aabclient.BundleToolDefaultVersion)
-	s.bundletoolVersionEntry.SetText(version)
+	videoPath := s.prefs.StringWithFallback("video_path", adbclient.DefaultVideoPath)
+	s.videoPathEntry.SetText(videoPath)
+
+	adbPort := s.prefs.IntWithFallback("adb_port", adbclient.DefaultPort)
+	s.adbPortEntry.SetText(strconv.FormatInt(int64(adbPort), 10))
+
+	bundletoolVersion := s.prefs.StringWithFallback("bundletool_version", aabclient.BundleToolDefaultVersion)
+	s.bundletoolVersionEntry.SetText(bundletoolVersion)
 }
 
 func (s *settings) buildAndroidToolUI() fyne.CanvasObject {
@@ -207,6 +219,11 @@ func (s *settings) buildADBUI() fyne.CanvasObject {
 		OnSubmitted: s.onInstallPathSubmitted,
 	}
 
+	s.screenshotPathEntry = &widget.Entry{
+		PlaceHolder: adbclient.DefaultScreenshotPath,
+		OnSubmitted: s.onScreenshotPathSubmitted,
+	}
+
 	s.videoPathEntry = &widget.Entry{
 		PlaceHolder: adbclient.DefaultVideoPath,
 		OnSubmitted: s.onVideoPathSubmitted,
@@ -235,6 +252,8 @@ func (s *settings) buildADBUI() fyne.CanvasObject {
 			2,
 			NewBoldLabel("Install path:"),
 			s.installPathEntry,
+			NewBoldLabel("Screenshot path:"),
+			s.screenshotPathEntry,
 			NewBoldLabel("Video path:"),
 			s.videoPathEntry,
 		),
