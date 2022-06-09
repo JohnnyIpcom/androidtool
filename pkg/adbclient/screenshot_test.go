@@ -30,7 +30,7 @@ func TestScreenshot(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	err = client.Download(context.Background(), device, screenshotPath, "./test.png")
+	err = client.DownloadFile(context.Background(), device, screenshotPath, "./test.png")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

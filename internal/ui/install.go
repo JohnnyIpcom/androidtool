@@ -68,7 +68,7 @@ func InstallAPK(client *adbclient.Client, serial string, file fyne.URIReadCloser
 	}
 
 	apkPath := client.GetInstallPath()
-	if err := client.Upload(ctx, device, file.URI().Path(), apkPath, bar.WithUploadProgress()); err != nil {
+	if err := client.UploadFile(ctx, device, file.URI().Path(), apkPath, bar.WithUploadProgress()); err != nil {
 		onError(err)
 		return
 	}

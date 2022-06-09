@@ -127,7 +127,7 @@ func Video(client *adbclient.Client, device *adbclient.Device, parent fyne.Windo
 		defer cancel()
 
 		progressBar.SetText("")
-		if err := client.Download(ctx, device, videoPath, videoPathEntry.Text, progressBar.WithDownloadProgress()); err != nil {
+		if err := client.DownloadFile(ctx, device, videoPath, videoPathEntry.Text, progressBar.WithDownloadProgress()); err != nil {
 			onError(err)
 			return
 		}

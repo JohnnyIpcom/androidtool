@@ -32,7 +32,7 @@ func WithDownloadProgress(f func(sentBytes int64, totalBytes int64)) DownloadOpt
 }
 
 // Download downloads a file from the device.
-func (c *Client) Download(ctx context.Context, device *Device, src, dst string, opts ...DownloadOption) error {
+func (c *Client) DownloadFile(ctx context.Context, device *Device, src, dst string, opts ...DownloadOption) error {
 	c.log.Infof("Downloading %s to %s...", src, dst)
 
 	options := downloadOptions{}

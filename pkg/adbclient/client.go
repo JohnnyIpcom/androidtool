@@ -364,3 +364,31 @@ func (c *Client) SendLink(device *Device, link string) error {
 	c.log.Debug(string(resp))
 	return nil
 }
+
+// GetFreeSpace returns the free space on the device.
+func (c *Client) GetFreeSpace(device *Device) (uint64, error) {
+	c.log.Info("Getting free space...")
+
+	// get size in bytes
+	resp, err := c.runCommand(device, "df", "-k")
+	if err != nil {
+		return 0, err
+	}
+
+	c.log.Debug(string(resp))
+	outlines := strings.Split(string(resp), "\n")
+	l := len(outlines)
+	for _, line := range outlines[1 : l-1] {
+		if strings.Contains(line, "/data") {
+			parsedLine := strings.Fields(line)
+			freeSpace, err := strconv.ParseUint(parsedLine[3], 10, 64)
+			if err != nil {
+				return 0, err
+			}
+
+			return freeSpace * 1024, nil
+		}
+	}
+
+	return 0, fmt.Errorf("could not parse free space")
+}

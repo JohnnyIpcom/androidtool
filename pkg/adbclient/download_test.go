@@ -25,7 +25,7 @@ func TestDownloadFile(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	err = client.Download(context.Background(), device, "/sdcard/Kik/4e17b973-b4f2-4f3a-860f-bfbac196aadc.jpg", "./test.jpg")
+	err = client.DownloadFile(context.Background(), device, "/sdcard/Kik/4e17b973-b4f2-4f3a-860f-bfbac196aadc.jpg", "./test.jpg")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -205,7 +205,7 @@ func Screenshot(client *adbclient.Client, device *adbclient.Device, parent fyne.
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		if err := client.Download(ctx, device, screenshotPath, screenshotPathEntry.Text); err != nil {
+		if err := client.DownloadFile(ctx, device, screenshotPath, screenshotPathEntry.Text); err != nil {
 			GetApp().ShowError(err, d.Hide, parent)
 			return
 		}

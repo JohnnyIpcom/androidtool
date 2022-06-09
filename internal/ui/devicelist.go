@@ -22,6 +22,7 @@ type DeviceItem struct {
 	screenshot *widget.Button
 	video      *widget.Button
 	send       *widget.Button
+	zeroing    *widget.Button
 	delete     *widget.Button
 }
 
@@ -57,6 +58,7 @@ func (d *DeviceList) CreateItem() fyne.CanvasObject {
 			widget.NewButtonWithIcon("", assets.ScreenshotIcon, nil),
 			widget.NewButtonWithIcon("", assets.VideoIcon, nil),
 			widget.NewButtonWithIcon("", assets.SendIcon, nil),
+			widget.NewButtonWithIcon("", assets.ZeroingIcon, nil),
 			widget.NewButtonWithIcon("", assets.DeleteIcon, nil),
 		),
 	)
@@ -96,7 +98,12 @@ func (d *DeviceList) UpdateItem(id int, item fyne.CanvasObject) {
 		go Send(d.client, deviceItem.Device, d.parent)
 	}
 
-	deviceItem.delete = container.Objects[1].(*fyne.Container).Objects[5].(*widget.Button)
+	deviceItem.zeroing = container.Objects[1].(*fyne.Container).Objects[5].(*widget.Button)
+	deviceItem.zeroing.OnTapped = func() {
+		go Zeroing(d.client, deviceItem.Device, d.parent)
+	}
+
+	deviceItem.delete = container.Objects[1].(*fyne.Container).Objects[6].(*widget.Button)
 	deviceItem.delete.OnTapped = func() {
 		d.OnDelete(id)
 	}
@@ -106,11 +113,13 @@ func (d *DeviceList) UpdateItem(id int, item fyne.CanvasObject) {
 		deviceItem.screenshot.Enable()
 		deviceItem.video.Enable()
 		deviceItem.send.Enable()
+		deviceItem.zeroing.Enable()
 	} else {
 		deviceItem.logs.Disable()
 		deviceItem.screenshot.Disable()
 		deviceItem.video.Disable()
 		deviceItem.send.Disable()
+		deviceItem.zeroing.Disable()
 	}
 
 	// If no device is selected, select the first one
