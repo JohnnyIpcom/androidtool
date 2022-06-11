@@ -17,8 +17,8 @@ type Unzipper struct {
 	dest   string
 }
 
-func NewUnzipper(source, dest string) (*Unzipper, error) {
-	reader, err := zip.OpenReader(source)
+func NewUnzipper(zipPath string, dest string) (*Unzipper, error) {
+	reader, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return nil, err
 	}

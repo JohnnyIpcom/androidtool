@@ -22,7 +22,7 @@ func TestBuildAPK(t *testing.T) {
 	defer c.Stop()
 	keystore := NewDefaultKeystoreConfig("D:\\build.keystore")
 
-	out, err := c.BuildAPKs(context.Background(), "D:\\build.aab", "D:\\build.apks", "R58N819VF0L", keystore)
+	out, err := c.BuildAPKs(context.Background(), "D:\\build.aab", "D:\\build.apks", "R58N819VF0L", false, keystore)
 	if err != nil {
 		t.Fatal(fmt.Printf("%s:%s", err.Error(), string(out)))
 	}

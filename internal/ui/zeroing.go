@@ -73,11 +73,16 @@ func Zeroing(client *adbclient.Client, device *adbclient.Device, parent fyne.Win
 		numFullChunks := size.Bytes() / chunkSize   // count full size chunks
 		lastChunkSize := size.Bytes() % chunkSize   // count last chunk size(can be 0)
 
-		for i := uint64(0); i < numFullChunks+1; i++ {
+		numChunks := numFullChunks
+		if lastChunkSize > 0 {
+			numChunks++
+		}
+
+		for i := uint64(0); i < numChunks; i++ {
 			path := fmt.Sprintf(zeroingPathEntry.Text, i)
 
 			limit := chunkSize
-			if i == numFullChunks {
+			if i == numChunks-1 && lastChunkSize > 0 {
 				limit = lastChunkSize
 			}
 
@@ -85,7 +90,7 @@ func Zeroing(client *adbclient.Client, device *adbclient.Device, parent fyne.Win
 				delta := float32(zeroingProgress.Max - zeroingProgress.Min)
 				ratio := float32(zeroingProgress.Value-zeroingProgress.Min) / delta
 
-				return fmt.Sprintf("(%d/%d) Zeroing %s [%s]", i+1, numFullChunks+1, filepath.Base(path), strconv.Itoa(int(ratio*100))+"%")
+				return fmt.Sprintf("(%d/%d) Zeroing %s [%s]", i+1, numChunks, filepath.Base(path), strconv.Itoa(int(ratio*100))+"%")
 			}
 
 			if limit != 0 {

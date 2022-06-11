@@ -87,7 +87,7 @@ func NewDefaultKeystoreConfig(path string) *KeystoreConfig {
 }
 
 // BuildAPKs unpacks the given AAB file and builds the universal APKs file bundle.
-func (c *Client) BuildAPKs(ctx context.Context, aabPath string, apksPath string, serial string, keystore *KeystoreConfig) ([]byte, error) {
+func (c *Client) BuildAPKs(ctx context.Context, aabPath string, apksPath string, serial string, universal bool, keystore *KeystoreConfig) ([]byte, error) {
 	c.log.Info("Building APKs...")
 	var args []string = []string{
 		"build-apks",
@@ -101,6 +101,10 @@ func (c *Client) BuildAPKs(ctx context.Context, aabPath string, apksPath string,
 			"--connected-device",
 			fmt.Sprintf("--device-id=%s", serial),
 		)
+	}
+
+	if universal {
+		args = append(args, "--mode=universal")
 	}
 
 	if keystore != nil {

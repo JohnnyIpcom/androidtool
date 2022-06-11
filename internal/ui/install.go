@@ -115,7 +115,7 @@ func InstallAAB(client *aabclient.Client, serial string, file fyne.URIReadCloser
 	nameWithoutExt := strings.TrimSuffix(fullName, filepath.Ext(fullName))
 
 	apksFile := filepath.Join(dir, nameWithoutExt+".apks")
-	out, err := client.BuildAPKs(ctx, file.URI().Path(), apksFile, serial, keystore)
+	out, err := client.BuildAPKs(ctx, file.URI().Path(), apksFile, serial, false, keystore)
 
 	if err != nil {
 		onError(string(out), err)

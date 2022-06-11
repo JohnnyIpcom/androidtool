@@ -2,13 +2,16 @@ package ui
 
 import (
 	"fmt"
+	"image"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 	"github.com/johnnyipcom/androidtool/internal/assets"
 	"github.com/johnnyipcom/androidtool/pkg/aabclient"
 	"github.com/johnnyipcom/androidtool/pkg/aapt"
+	"github.com/johnnyipcom/androidtool/pkg/apk"
 	"github.com/johnnyipcom/androidtool/pkg/generic"
 	"golang.org/x/sync/errgroup"
 )
@@ -46,7 +49,11 @@ type Build struct {
 	Path         string
 	APKsPath     string
 	UnpackedPath string
+	APK          *apk.APK
+	Icon         image.Image
 
+	typeIcon *widget.Icon
+	icon     *canvas.Image
 	abi      *widget.Button
 	sizes    *widget.Button
 	manifest *widget.Button
@@ -66,11 +73,18 @@ func (b *BuildList) Length() int {
 }
 
 func (b *BuildList) CreateItem() fyne.CanvasObject {
+	typeIcon := widget.NewIcon(assets.BuildsTabIcon)
+
+	apkIcon := canvas.NewImageFromImage(nil)
+	apkIcon.SetMinSize(typeIcon.MinSize())
+	apkIcon.FillMode = canvas.ImageFillContain
+
 	return container.NewBorder(
 		nil,
 		nil,
 		container.NewHBox(
-			widget.NewIcon(assets.BuildsTabIcon),
+			typeIcon,
+			apkIcon,
 			widget.NewLabel("<BUILD>"),
 		),
 		container.NewHBox(
@@ -85,8 +99,18 @@ func (b *BuildList) UpdateItem(id int, item fyne.CanvasObject) {
 	c := item.(*fyne.Container)
 
 	buildItem := b.items.Load(id)
-	c.Objects[0].(*fyne.Container).Objects[0].(*widget.Icon).SetResource(buildItem.Type.Icon())
-	c.Objects[0].(*fyne.Container).Objects[1].(*widget.Label).SetText(buildItem.Path)
+
+	buildItem.typeIcon = c.Objects[0].(*fyne.Container).Objects[0].(*widget.Icon)
+	buildItem.typeIcon.SetResource(buildItem.Type.Icon())
+
+	buildItem.icon = c.Objects[0].(*fyne.Container).Objects[1].(*canvas.Image)
+	if buildItem.Icon != nil {
+		buildItem.icon.Image = buildItem.Icon
+		buildItem.icon.Refresh()
+	}
+
+	c.Objects[0].(*fyne.Container).Objects[2].(*widget.Label).SetText(buildItem.Path)
+
 	buildItem.abi = c.Objects[1].(*fyne.Container).Objects[0].(*widget.Button)
 	buildItem.abi.OnTapped = func() {
 		go func() {
@@ -137,14 +161,44 @@ func (b *BuildList) UpdateItem(id int, item fyne.CanvasObject) {
 }
 
 func (b *BuildList) OnSelected(id int) {
+	go func() {
+		buildItem := b.items.Load(id)
+		switch buildItem.Type {
+		case BuildTypeAPK, BuildTypeAAB:
+			BuildInfoAPK(buildItem.APK, buildItem.Icon, b.parent)
+
+		default:
+			GetApp().ShowError(fmt.Errorf("unknown build type: %s", buildItem.Type), nil, b.parent)
+		}
+	}()
 	b.Unselect(id)
 }
 
 func (b *BuildList) LoadAPK(path string) {
+	var apkInfo *APKInfo
+
+	g := errgroup.Group{}
+	g.Go(func() error {
+		info, err := LoadAPK(path, b.parent)
+		if err != nil {
+			return err
+		}
+
+		apkInfo = info
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		GetApp().ShowError(err, nil, b.parent)
+		return
+	}
+
 	b.items.Store(
 		&Build{
 			Type: BuildTypeAPK,
 			Path: path,
+			APK:  apkInfo.APK,
+			Icon: apkInfo.Icon,
 		},
 	)
 
@@ -176,6 +230,8 @@ func (b *BuildList) LoadAAB(path string, useCachedData bool) {
 			Path:         path,
 			APKsPath:     aabInfo.APKsPath,
 			UnpackedPath: aabInfo.UnpackedPath,
+			APK:          aabInfo.APK,
+			Icon:         aabInfo.Icon,
 		},
 	)
 
